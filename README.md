@@ -59,6 +59,7 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 - The static identifiers of the official app (client id, API key) are the public ones documented by pytoyoda. Toyota may rotate them.
 - Unlocking asks for confirmation but, by design, not for a watch PIN. Anyone wearing an unlocked watch could unlock your car. If you want that barrier, set a screen lock on the watch: the app then also requires the watch to be unlocked.
 - Logs never contain tokens or credentials. The debug-only helpers (token injection, demo mode) do not exist in release builds.
+- Full privacy policy: [PRIVACY.md](PRIVACY.md).
 - Found a vulnerability or a bug? Open an issue. Please never paste tokens, VINs or coordinates.
 
 ## Known limits

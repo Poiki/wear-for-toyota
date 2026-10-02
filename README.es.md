@@ -59,6 +59,7 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 - Los identificadores estáticos de la app oficial (client id, API key) son los públicos documentados por pytoyoda. Toyota puede cambiarlos.
 - Abrir pide confirmación pero, por diseño, no un PIN del reloj. Quien lleve un reloj desbloqueado podría abrir tu coche. Si quieres esa barrera, configura un bloqueo de pantalla en el reloj: la app exigirá entonces que esté desbloqueado.
 - Los logs nunca contienen tokens ni credenciales. Las ayudas de depuración (inyección de tokens, modo demo) no existen en los builds release.
+- Política de privacidad completa: [PRIVACY.md](PRIVACY.md).
 - ¿Has encontrado una vulnerabilidad o un fallo? Abre una incidencia. No pegues nunca tokens, VIN ni coordenadas.
 
 ## Límites conocidos
