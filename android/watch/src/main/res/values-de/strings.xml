@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wear für Toyota</string>
+
+    <string name="garage_title">Meine Garage</string>
+    <string name="no_vehicles">Keine Fahrzeuge</string>
+    <string name="unlink">Trennen</string>
+
+    <string name="link_hint">Uhr über die Telefon-App verbinden oder hier anmelden</string>
+    <string name="login_here">Hier anmelden</string>
+    <string name="account_title">Toyota-Konto</string>
+    <string name="email">E-Mail</string>
+    <string name="password">Passwort</string>
+    <string name="is_lexus">Es ist ein Lexus</string>
+    <string name="sign_in">Anmelden</string>
+    <string name="login_note">Das Passwort wird einmal verwendet; die Uhr speichert nur ein verschlüsseltes Token.</string>
+
+    <string name="locked">Verriegelt</string>
+    <string name="locked_door_open">Verriegelt · Tür offen</string>
+    <string name="unlocked">Entriegelt</string>
+    <string name="lock_unknown">Status unbekannt</string>
+    <string name="range">Reichweite</string>
+    <string name="fuel">Kraftstoff</string>
+    <string name="battery">Batterie</string>
+    <string name="odometer">Kilometerstand</string>
+    <string name="km_format">%1$s km</string>
+
+    <string name="remote_control">Fernsteuerung</string>
+    <string name="lock_unlock">Ver-/Entriegeln</string>
+    <string name="climate">Klima</string>
+    <string name="last_position">Letzte Position</string>
+    <string name="refresh">Aktualisieren</string>
+    <string name="lock">Verriegeln</string>
+    <string name="unlock">Entriegeln</string>
+    <string name="confirm_unlock">Auto entriegeln?</string>
+    <string name="no_data">Keine Daten</string>
+    <string name="climate_on">An</string>
+    <string name="climate_off">Aus</string>
+    <string name="climate_starting">Startet</string>
+    <string name="climate_stopping">Stoppt</string>
+    <string name="turn_on">Einschalten</string>
+    <string name="turn_off">Ausschalten</string>
+
+    <string name="loading">Lädt…</string>
+    <string name="today">Heute</string>
+    <string name="yesterday">Gestern</string>
+    <string name="when_format">%1$s, %2$s</string>
+
+    <string name="busy_login">Anmeldung…</string>
+    <string name="busy_vehicles">Fahrzeuge suchen…</string>
+    <string name="busy_wake">Auto wird geweckt…</string>
+    <string name="busy_refresh">Aktualisiere…</string>
+    <string name="busy_sending">Senden…</string>
+    <string name="busy_verifying">Prüfen…</string>
+
+    <string name="result_locked">Fahrzeug verriegelt</string>
+    <string name="result_unlocked">Fahrzeug entriegelt</string>
+    <string name="result_unconfirmed">Befehl gesendet, nicht bestätigt</string>
+    <string name="result_climate_on">Klima an</string>
+    <string name="result_climate_off">Klima aus</string>
+    <string name="result_rejected">Das Auto hat den Befehl abgelehnt</string>
+
+    <string name="err_login">Toyota hat die Anmeldung abgelehnt. E-Mail und Passwort prüfen.</string>
+    <string name="err_session">Sitzung abgelaufen. Erneut anmelden.</string>
+    <string name="err_no_vehicles">Keine Fahrzeuge in diesem Konto.</string>
+    <string name="err_rate">Toyota begrenzt die Anfragen. Kurz warten.</string>
+    <string name="err_service">Toyota-Dienst nicht verfügbar.</string>
+    <string name="err_access">Toyota hat den Zugriff abgelehnt (%1$s).</string>
+    <string name="err_unsupported">Dieses Auto unterstützt den Befehl nicht.</string>
+    <string name="err_generic">Toyota-Fehler (%1$s).</string>
+    <string name="err_offline">Keine Verbindung.</string>
+    <string name="err_unknown">Fehler: %1$s</string>
+    <string name="err_wake_rejected">Das Auto hat die Anfrage abgelehnt</string>
+    <string name="err_no_response">Das Auto antwortet nicht; letzte Daten werden angezeigt</string>
+    <string name="err_no_maps">Keine Karten-App auf der Uhr</string>
+    <string name="err_watch_locked">Zuerst die Uhr entsperren</string>
+    <string name="map_label">Auto</string>
+</resources>

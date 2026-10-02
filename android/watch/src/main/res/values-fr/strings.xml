@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wear pour Toyota</string>
+
+    <string name="garage_title">Mon Garage</string>
+    <string name="no_vehicles">Aucun véhicule</string>
+    <string name="unlink">Dissocier</string>
+
+    <string name="link_hint">Associez la montre depuis l\'app du téléphone ou connectez-vous ici</string>
+    <string name="login_here">Se connecter ici</string>
+    <string name="account_title">Compte Toyota</string>
+    <string name="email">E-mail</string>
+    <string name="password">Mot de passe</string>
+    <string name="is_lexus">C\'est une Lexus</string>
+    <string name="sign_in">Se connecter</string>
+    <string name="login_note">Le mot de passe sert une seule fois ; la montre ne garde qu\'un jeton chiffré.</string>
+
+    <string name="locked">Verrouillée</string>
+    <string name="locked_door_open">Verrouillée · porte ouverte</string>
+    <string name="unlocked">Déverrouillée</string>
+    <string name="lock_unknown">État inconnu</string>
+    <string name="range">Autonomie</string>
+    <string name="fuel">Carburant</string>
+    <string name="battery">Batterie</string>
+    <string name="odometer">Kilométrage</string>
+    <string name="km_format">%1$s km</string>
+
+    <string name="remote_control">Commandes à distance</string>
+    <string name="lock_unlock">Verrouiller / Déverrouiller</string>
+    <string name="climate">Climatisation</string>
+    <string name="last_position">Dernière position</string>
+    <string name="refresh">Actualiser</string>
+    <string name="lock">Verrouiller</string>
+    <string name="unlock">Déverrouiller</string>
+    <string name="confirm_unlock">Déverrouiller la voiture ?</string>
+    <string name="no_data">Aucune donnée</string>
+    <string name="climate_on">Allumée</string>
+    <string name="climate_off">Éteinte</string>
+    <string name="climate_starting">Démarrage</string>
+    <string name="climate_stopping">Arrêt</string>
+    <string name="turn_on">Allumer</string>
+    <string name="turn_off">Éteindre</string>
+
+    <string name="loading">Chargement…</string>
+    <string name="today">Aujourd\'hui</string>
+    <string name="yesterday">Hier</string>
+    <string name="when_format">%1$s, %2$s</string>
+
+    <string name="busy_login">Connexion…</string>
+    <string name="busy_vehicles">Recherche des véhicules…</string>
+    <string name="busy_wake">Réveil de la voiture…</string>
+    <string name="busy_refresh">Mise à jour…</string>
+    <string name="busy_sending">Envoi…</string>
+    <string name="busy_verifying">Vérification…</string>
+
+    <string name="result_locked">Véhicule verrouillé</string>
+    <string name="result_unlocked">Véhicule déverrouillé</string>
+    <string name="result_unconfirmed">Commande envoyée, non confirmée</string>
+    <string name="result_climate_on">Climatisation allumée</string>
+    <string name="result_climate_off">Climatisation éteinte</string>
+    <string name="result_rejected">La voiture a refusé la commande</string>
+
+    <string name="err_login">Toyota a refusé la connexion. Vérifiez e-mail et mot de passe.</string>
+    <string name="err_session">Session expirée. Reconnectez-vous.</string>
+    <string name="err_no_vehicles">Aucun véhicule sur ce compte.</string>
+    <string name="err_rate">Toyota limite les requêtes. Patientez un instant.</string>
+    <string name="err_service">Service Toyota indisponible.</string>
+    <string name="err_access">Toyota a refusé l\'accès (%1$s).</string>
+    <string name="err_unsupported">Cette voiture ne prend pas en charge cette commande.</string>
+    <string name="err_generic">Erreur Toyota (%1$s).</string>
+    <string name="err_offline">Pas de connexion.</string>
+    <string name="err_unknown">Échec : %1$s</string>
+    <string name="err_wake_rejected">La voiture a refusé la demande</string>
+    <string name="err_no_response">La voiture ne répond pas ; dernières données affichées</string>
+    <string name="err_no_maps">Aucune app de cartes sur la montre</string>
+    <string name="err_watch_locked">Déverrouillez d\'abord la montre</string>
+    <string name="map_label">Voiture</string>
+</resources>

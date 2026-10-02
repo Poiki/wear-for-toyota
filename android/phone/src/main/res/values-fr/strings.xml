@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wear pour Toyota</string>
+    <string name="phone_title">Associer la montre à Toyota</string>
+    <string name="phone_email">E-mail MyToyota</string>
+    <string name="phone_password">Mot de passe</string>
+    <string name="phone_lexus">C\'est une Lexus</string>
+    <string name="phone_button">Se connecter et envoyer à la montre</string>
+    <string name="phone_note">Les identifiants servent une seule fois et ne sont jamais enregistrés sur le téléphone.</string>
+    <string name="phone_busy">Connexion à Toyota…</string>
+    <string name="phone_sent">Jetons envoyés à la montre (%1$s). Vous pouvez fermer cette app.</string>
+    <string name="phone_no_watch">Aucune montre connectée à ce téléphone</string>
+</resources>

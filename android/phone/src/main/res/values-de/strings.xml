@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wear für Toyota</string>
+    <string name="phone_title">Uhr mit Toyota verbinden</string>
+    <string name="phone_email">MyToyota-E-Mail</string>
+    <string name="phone_password">Passwort</string>
+    <string name="phone_lexus">Es ist ein Lexus</string>
+    <string name="phone_button">Anmelden und an die Uhr senden</string>
+    <string name="phone_note">Die Zugangsdaten werden einmal verwendet und nie auf dem Telefon gespeichert.</string>
+    <string name="phone_busy">Anmeldung bei Toyota…</string>
+    <string name="phone_sent">Tokens an die Uhr gesendet (%1$s). Du kannst diese App schließen.</string>
+    <string name="phone_no_watch">Keine Uhr mit diesem Telefon verbunden</string>
+</resources>

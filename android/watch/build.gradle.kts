@@ -1,0 +1,54 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+plugins {
+    id("com.android.application")
+    alias(libs.plugins.compose.compiler)
+}
+
+android {
+    namespace = "com.poiki.toyotawear"
+    compileSdk = 37
+    defaultConfig {
+        applicationId = "com.poiki.toyotawear"
+        minSdk = 30
+        targetSdk = 37
+        versionCode = 1
+        versionName = "0.1.0"
+    }
+    // Optional release key: android/keystore.properties with storeFile, storePassword, keyAlias, keyPassword (git-ignored).
+    val keystore = rootProject.file("keystore.properties")
+    if (keystore.exists()) {
+        val props = Properties().apply { keystore.inputStream().use { load(it) } }
+        signingConfigs.create("release") {
+            storeFile = rootProject.file(props.getProperty("storeFile"))
+            storePassword = props.getProperty("storePassword")
+            keyAlias = props.getProperty("keyAlias")
+            keyPassword = props.getProperty("keyPassword")
+        }
+    }
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+    buildFeatures { compose = true }
+}
+
+dependencies {
+    implementation(project(":core"))
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.wear.compose.material3)
+    implementation(libs.wear.compose.foundation)
+    implementation(libs.play.services.wearable)
+}

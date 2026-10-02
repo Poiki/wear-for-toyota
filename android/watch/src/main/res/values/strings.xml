@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wear for Toyota</string>
+
+    <string name="garage_title">My Garage</string>
+    <string name="no_vehicles">No vehicles</string>
+    <string name="unlink">Unlink</string>
+
+    <string name="link_hint">Link the watch from the phone app, or sign in here</string>
+    <string name="login_here">Sign in here</string>
+    <string name="account_title">Toyota account</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="is_lexus">It\'s a Lexus</string>
+    <string name="sign_in">Sign in</string>
+    <string name="login_note">Your password is used once; the watch only keeps an encrypted token.</string>
+
+    <string name="locked">Locked</string>
+    <string name="locked_door_open">Locked · door open</string>
+    <string name="unlocked">Unlocked</string>
+    <string name="lock_unknown">Unknown state</string>
+    <string name="range">Range</string>
+    <string name="fuel">Fuel</string>
+    <string name="battery">Battery</string>
+    <string name="odometer">Mileage</string>
+    <string name="km_format">%1$s km</string>
+
+    <string name="remote_control">Remote Control</string>
+    <string name="lock_unlock">Lock / Unlock</string>
+    <string name="climate">Climate</string>
+    <string name="last_position">Last position</string>
+    <string name="refresh">Refresh</string>
+    <string name="lock">Lock</string>
+    <string name="unlock">Unlock</string>
+    <string name="confirm_unlock">Unlock the car?</string>
+    <string name="no_data">No data</string>
+    <string name="climate_on">On</string>
+    <string name="climate_off">Off</string>
+    <string name="climate_starting">Starting</string>
+    <string name="climate_stopping">Stopping</string>
+    <string name="turn_on">Turn on</string>
+    <string name="turn_off">Turn off</string>
+
+    <string name="loading">Loading…</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="when_format">%1$s, %2$s</string>
+
+    <string name="busy_login">Signing in…</string>
+    <string name="busy_vehicles">Looking for vehicles…</string>
+    <string name="busy_wake">Waking the car…</string>
+    <string name="busy_refresh">Updating…</string>
+    <string name="busy_sending">Sending…</string>
+    <string name="busy_verifying">Verifying…</string>
+
+    <string name="result_locked">Vehicle locked</string>
+    <string name="result_unlocked">Vehicle unlocked</string>
+    <string name="result_unconfirmed">Command sent, not confirmed</string>
+    <string name="result_climate_on">Climate on</string>
+    <string name="result_climate_off">Climate off</string>
+    <string name="result_rejected">The car refused the command</string>
+
+    <string name="err_login">Toyota refused the sign-in. Check email and password.</string>
+    <string name="err_session">Session expired. Sign in again.</string>
+    <string name="err_no_vehicles">No vehicles in this account.</string>
+    <string name="err_rate">Toyota is limiting requests. Wait a moment.</string>
+    <string name="err_service">Toyota service unavailable.</string>
+    <string name="err_access">Toyota refused access (%1$s).</string>
+    <string name="err_unsupported">This car does not support that command.</string>
+    <string name="err_generic">Toyota error (%1$s).</string>
+    <string name="err_offline">No connection.</string>
+    <string name="err_unknown">Something failed: %1$s</string>
+    <string name="err_wake_rejected">The car refused the request</string>
+    <string name="err_no_response">The car is not responding; showing last known data</string>
+    <string name="err_no_maps">No maps app on the watch</string>
+    <string name="err_watch_locked">Unlock the watch first</string>
+    <string name="map_label">Car</string>
+</resources>

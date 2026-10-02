@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wear para Toyota</string>
+
+    <string name="garage_title">Mi Garaje</string>
+    <string name="no_vehicles">Sin vehículos</string>
+    <string name="unlink">Desvincular</string>
+
+    <string name="link_hint">Vincula el reloj desde la app del teléfono o inicia sesión aquí</string>
+    <string name="login_here">Iniciar sesión aquí</string>
+    <string name="account_title">Cuenta Toyota</string>
+    <string name="email">Email</string>
+    <string name="password">Contraseña</string>
+    <string name="is_lexus">Es un Lexus</string>
+    <string name="sign_in">Entrar</string>
+    <string name="login_note">La contraseña se usa una vez; el reloj solo guarda un token cifrado.</string>
+
+    <string name="locked">Cerrado</string>
+    <string name="locked_door_open">Cerrado · puerta abierta</string>
+    <string name="unlocked">Abierto</string>
+    <string name="lock_unknown">Estado desconocido</string>
+    <string name="range">Autonomía</string>
+    <string name="fuel">Combustible</string>
+    <string name="battery">Batería</string>
+    <string name="odometer">Kilometraje</string>
+    <string name="km_format">%1$s km</string>
+
+    <string name="remote_control">Control Remoto</string>
+    <string name="lock_unlock">Cerrar / Abrir</string>
+    <string name="climate">Climatizador</string>
+    <string name="last_position">Última posición</string>
+    <string name="refresh">Actualizar</string>
+    <string name="lock">Cerrar</string>
+    <string name="unlock">Abrir</string>
+    <string name="confirm_unlock">¿Abrir el coche?</string>
+    <string name="no_data">Sin datos</string>
+    <string name="climate_on">Encendido</string>
+    <string name="climate_off">Apagado</string>
+    <string name="climate_starting">Arrancando</string>
+    <string name="climate_stopping">Parando</string>
+    <string name="turn_on">Encender</string>
+    <string name="turn_off">Apagar</string>
+
+    <string name="loading">Cargando…</string>
+    <string name="today">Hoy</string>
+    <string name="yesterday">Ayer</string>
+    <string name="when_format">%1$s, %2$s</string>
+
+    <string name="busy_login">Iniciando sesión…</string>
+    <string name="busy_vehicles">Buscando vehículos…</string>
+    <string name="busy_wake">Despertando el coche…</string>
+    <string name="busy_refresh">Actualizando…</string>
+    <string name="busy_sending">Enviando…</string>
+    <string name="busy_verifying">Verificando…</string>
+
+    <string name="result_locked">Vehículo cerrado</string>
+    <string name="result_unlocked">Vehículo abierto</string>
+    <string name="result_unconfirmed">Orden enviada, sin confirmar</string>
+    <string name="result_climate_on">Climatizador encendido</string>
+    <string name="result_climate_off">Climatizador apagado</string>
+    <string name="result_rejected">El coche no aceptó la orden</string>
+
+    <string name="err_login">Toyota no aceptó el acceso. Revisa email y contraseña.</string>
+    <string name="err_session">Sesión caducada. Inicia sesión de nuevo.</string>
+    <string name="err_no_vehicles">No hay vehículos en la cuenta.</string>
+    <string name="err_rate">Toyota está limitando las peticiones. Espera un momento.</string>
+    <string name="err_service">Servicio Toyota no disponible.</string>
+    <string name="err_access">Toyota rechazó el acceso (%1$s).</string>
+    <string name="err_unsupported">Este coche no admite esa orden.</string>
+    <string name="err_generic">Error de Toyota (%1$s).</string>
+    <string name="err_offline">Sin conexión.</string>
+    <string name="err_unknown">Algo ha fallado: %1$s</string>
+    <string name="err_wake_rejected">El coche no aceptó la petición</string>
+    <string name="err_no_response">El coche no responde; se muestran los últimos datos</string>
+    <string name="err_no_maps">No hay app de mapas en el reloj</string>
+    <string name="err_watch_locked">Desbloquea el reloj primero</string>
+    <string name="map_label">Coche</string>
+</resources>

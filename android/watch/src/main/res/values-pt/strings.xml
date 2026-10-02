@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Wear para Toyota</string>
+
+    <string name="garage_title">A minha Garagem</string>
+    <string name="no_vehicles">Sem veículos</string>
+    <string name="unlink">Desassociar</string>
+
+    <string name="link_hint">Associe o relógio pela app do telemóvel ou inicie sessão aqui</string>
+    <string name="login_here">Iniciar sessão aqui</string>
+    <string name="account_title">Conta Toyota</string>
+    <string name="email">E-mail</string>
+    <string name="password">Palavra-passe</string>
+    <string name="is_lexus">É um Lexus</string>
+    <string name="sign_in">Iniciar sessão</string>
+    <string name="login_note">A palavra-passe é usada uma vez; o relógio só guarda um token cifrado.</string>
+
+    <string name="locked">Trancado</string>
+    <string name="locked_door_open">Trancado · porta aberta</string>
+    <string name="unlocked">Destrancado</string>
+    <string name="lock_unknown">Estado desconhecido</string>
+    <string name="range">Autonomia</string>
+    <string name="fuel">Combustível</string>
+    <string name="battery">Bateria</string>
+    <string name="odometer">Quilometragem</string>
+    <string name="km_format">%1$s km</string>
+
+    <string name="remote_control">Controlo remoto</string>
+    <string name="lock_unlock">Trancar / Destrancar</string>
+    <string name="climate">Climatização</string>
+    <string name="last_position">Última posição</string>
+    <string name="refresh">Atualizar</string>
+    <string name="lock">Trancar</string>
+    <string name="unlock">Destrancar</string>
+    <string name="confirm_unlock">Destrancar o carro?</string>
+    <string name="no_data">Sem dados</string>
+    <string name="climate_on">Ligada</string>
+    <string name="climate_off">Desligada</string>
+    <string name="climate_starting">A iniciar</string>
+    <string name="climate_stopping">A parar</string>
+    <string name="turn_on">Ligar</string>
+    <string name="turn_off">Desligar</string>
+
+    <string name="loading">A carregar…</string>
+    <string name="today">Hoje</string>
+    <string name="yesterday">Ontem</string>
+    <string name="when_format">%1$s, %2$s</string>
+
+    <string name="busy_login">A iniciar sessão…</string>
+    <string name="busy_vehicles">A procurar veículos…</string>
+    <string name="busy_wake">A acordar o carro…</string>
+    <string name="busy_refresh">A atualizar…</string>
+    <string name="busy_sending">A enviar…</string>
+    <string name="busy_verifying">A verificar…</string>
+
+    <string name="result_locked">Veículo trancado</string>
+    <string name="result_unlocked">Veículo destrancado</string>
+    <string name="result_unconfirmed">Comando enviado, sem confirmação</string>
+    <string name="result_climate_on">Climatização ligada</string>
+    <string name="result_climate_off">Climatização desligada</string>
+    <string name="result_rejected">O carro recusou o comando</string>
+
+    <string name="err_login">A Toyota recusou o início de sessão. Verifique e-mail e palavra-passe.</string>
+    <string name="err_session">Sessão expirada. Inicie sessão de novo.</string>
+    <string name="err_no_vehicles">Sem veículos nesta conta.</string>
+    <string name="err_rate">A Toyota está a limitar os pedidos. Aguarde um momento.</string>
+    <string name="err_service">Serviço Toyota indisponível.</string>
+    <string name="err_access">A Toyota recusou o acesso (%1$s).</string>
+    <string name="err_unsupported">Este carro não suporta esse comando.</string>
+    <string name="err_generic">Erro Toyota (%1$s).</string>
+    <string name="err_offline">Sem ligação.</string>
+    <string name="err_unknown">Algo falhou: %1$s</string>
+    <string name="err_wake_rejected">O carro recusou o pedido</string>
+    <string name="err_no_response">O carro não responde; a mostrar os últimos dados</string>
+    <string name="err_no_maps">Sem app de mapas no relógio</string>
+    <string name="err_watch_locked">Desbloqueie primeiro o relógio</string>
+    <string name="map_label">Carro</string>
+</resources>
