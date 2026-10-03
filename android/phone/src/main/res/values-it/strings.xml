@@ -5,8 +5,9 @@
     <string name="phone_email">E-mail MyToyota</string>
     <string name="phone_password">Password</string>
     <string name="phone_lexus">È una Lexus</string>
+    <string name="phone_save">Salva la password sull\'orologio (cifrata)</string>
     <string name="phone_button">Accedi e invia all\'orologio</string>
-    <string name="phone_note">Le credenziali si usano una sola volta e non vengono mai salvate sul telefono.</string>
+    <string name="phone_note">Sul telefono non viene salvato nulla. La password arriva all\'orologio solo se scegli di salvarla.</string>
     <string name="phone_busy">Accesso a Toyota…</string>
     <string name="phone_sent">Token inviati all\'orologio (%1$s). Puoi chiudere questa app.</string>
     <string name="phone_no_watch">Nessun orologio collegato a questo telefono</string>

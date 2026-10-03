@@ -5,8 +5,9 @@
     <string name="phone_email">E-mail MyToyota</string>
     <string name="phone_password">Mot de passe</string>
     <string name="phone_lexus">C\'est une Lexus</string>
+    <string name="phone_save">Enregistrer le mot de passe sur la montre (chiffré)</string>
     <string name="phone_button">Se connecter et envoyer à la montre</string>
-    <string name="phone_note">Les identifiants servent une seule fois et ne sont jamais enregistrés sur le téléphone.</string>
+    <string name="phone_note">Rien n\'est enregistré sur le téléphone. Le mot de passe n\'est envoyé à la montre que si vous choisissez de l\'enregistrer.</string>
     <string name="phone_busy">Connexion à Toyota…</string>
     <string name="phone_sent">Jetons envoyés à la montre (%1$s). Vous pouvez fermer cette app.</string>
     <string name="phone_no_watch">Aucune montre connectée à ce téléphone</string>

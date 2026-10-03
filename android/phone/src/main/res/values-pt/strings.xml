@@ -5,8 +5,9 @@
     <string name="phone_email">E-mail MyToyota</string>
     <string name="phone_password">Palavra-passe</string>
     <string name="phone_lexus">É um Lexus</string>
+    <string name="phone_save">Guardar a palavra-passe no relógio (cifrada)</string>
     <string name="phone_button">Iniciar sessão e enviar ao relógio</string>
-    <string name="phone_note">As credenciais são usadas uma vez e nunca ficam guardadas no telemóvel.</string>
+    <string name="phone_note">Nada fica guardado no telemóvel. A palavra-passe só vai para o relógio se optar por guardá-la.</string>
     <string name="phone_busy">A iniciar sessão na Toyota…</string>
     <string name="phone_sent">Tokens enviados ao relógio (%1$s). Pode fechar esta app.</string>
     <string name="phone_no_watch">Nenhum relógio ligado a este telemóvel</string>

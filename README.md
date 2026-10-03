@@ -15,6 +15,8 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 - **Lock / Unlock**: one screen with both actions. Unlocking asks for an on-screen confirmation. After every command the app wakes the car and verifies the real state before telling you "Vehicle locked".
 - **Climate**: a dial you turn with the crown or the +/- buttons (18–29 °C); start or stop for 10 minutes.
 - **Standalone**: the watch talks to Toyota on its own over Wi-Fi or LTE, or through the Bluetooth proxy of the paired phone. The phone app is optional.
+- **Stays signed in**: Toyota's refresh token keeps the session alive. Optionally, save your password at sign-in (off by default, encrypted under its own key) and the watch signs in again by itself if Toyota ever ends the session.
+- **Updates itself**: at most once a day, when you open it, the watch looks for a new release on GitHub and offers to install it.
 - **Battery-friendly by design**: no background polling, no services, one small encrypted state file. The car is only woken when you ask.
 
 ## Requirements
@@ -46,16 +48,28 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
    adb -s <watch-serial> install -r android/watch/build/outputs/apk/release/watch-release.apk
    ```
 
+   You can also skip step 1: download `wear-for-toyota-watch-<version>.apk` from the [latest release](https://github.com/Poiki/wear-for-toyota/releases/latest) and install it the same way. Only the official signed APKs can take the official updates.
+
 4. Sign in, either way:
    - **On the watch**: open the app → "Sign in here" → type your MyToyota email and password with the watch keyboard.
    - **From the phone** (optional): install `phone-release.apk` on the paired phone with `adb install -r`, open "Wear for Toyota", sign in. The tokens travel to the watch over the Bluetooth link; the phone keeps nothing.
 
-5. Optional, for a signed release of your own: create `android/keystore.properties` with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. It is git-ignored and picked up automatically. Both APKs must share the same signature for the phone → watch link to work.
+   Turn on "Save password" only if you want the watch to sign in again by itself when Toyota ends the session.
+
+5. Updates: when a new release is out, the app offers it. The first time, the watch opens the "Install unknown apps" switch for Wear for Toyota: turn it on, go back and accept again. Android's installer then asks you to confirm. If your watch hides that switch, grant it once from the computer:
+
+   ```bash
+   adb -s <watch-serial> shell appops set com.poiki.toyotawear REQUEST_INSTALL_PACKAGES allow
+   ```
+
+6. Optional, for a signed release of your own: create `android/keystore.properties` with `storeFile`, `storePassword`, `keyAlias` and `keyPassword`. It is git-ignored and picked up automatically. Both APKs must share the same signature for the phone → watch link to work. Android refuses updates signed with a different key, so copies signed with your own key or the debug key cannot install the official releases the app offers.
 
 ## Security and privacy
 
-- Your password is used once, for the login handshake, and never stored. The watch keeps the OAuth tokens encrypted with a key that lives in the Android Keystore; backups are disabled.
-- No analytics and no third-party servers. The watch talks only to Toyota's endpoints (`*.toyotaconnectedeurope.io`, `b2c-login.toyota-europe.com`) and, once per car, to Toyota's image CDN.
+- Your password is not stored unless you turn on "Save password" at sign-in. If you do, the watch encrypts it with its own AES-256 key in the Android Keystore (in StrongBox when the watch has one). That key only works while the watch is unlocked, if it has a screen lock. The watch reads the password only to sign in again when Toyota ends the session, and deletes it if Toyota rejects it. If the watch's Keystore can't protect it that way, the password is not saved and the app tells you.
+- The OAuth tokens are always encrypted with a key that lives in the Android Keystore; backups are disabled. "Unlink" deletes tokens, password and cached data.
+- No analytics and no third-party servers. The watch talks only to Toyota's endpoints (`*.toyotaconnectedeurope.io`, `b2c-login.toyota-europe.com`), once per car to Toyota's image CDN, and at most once a day to GitHub (`api.github.com`) to look for a new release. The APK is downloaded from GitHub only after you accept.
+- Updates go through Android's own installer, after your confirmation. Android only installs the APK if it is this app, signed with the same key and not older, so a tampered or foreign APK is refused.
 - The static identifiers of the official app (client id, API key) are the public ones documented by pytoyoda. Toyota may rotate them.
 - Unlocking asks for confirmation but, by design, not for a watch PIN. Anyone wearing an unlocked watch could unlock your car. If you want that barrier, set a screen lock on the watch: the app then also requires the watch to be unlocked.
 - Logs never contain tokens or credentials. The debug-only helpers (token injection, demo mode) do not exist in release builds.

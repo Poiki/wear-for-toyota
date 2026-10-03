@@ -37,6 +37,7 @@ import com.poiki.toyotawear.core.ToyotaAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 /** The whole phone app: log in to Toyota once and hand the tokens to the paired watch. Nothing is stored here. */
 class LoginActivity : ComponentActivity() {
@@ -53,6 +54,7 @@ private fun LoginScreen() {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var lexus by remember { mutableStateOf(false) }
+    var savePassword by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     val note = stringResource(R.string.phone_note)
     val busyText = stringResource(R.string.phone_busy)
@@ -84,6 +86,10 @@ private fun LoginScreen() {
             Switch(checked = lexus, onCheckedChange = { lexus = it })
             Text("  " + stringResource(R.string.phone_lexus))
         }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(checked = savePassword, onCheckedChange = { savePassword = it })
+            Text("  " + stringResource(R.string.phone_save))
+        }
         Button(
             onClick = {
                 val pw = password
@@ -94,7 +100,7 @@ private fun LoginScreen() {
                     status = runCatching {
                         withContext(Dispatchers.IO) {
                             val tokens = ToyotaAuth.login(email.trim(), pw, if (lexus) "L" else "T")
-                            sendToWatch(context, tokens)
+                            sendToWatch(context, tokens, if (savePassword) email.trim() to pw else null)
                         }
                     }.fold(
                         onSuccess = { context.getString(R.string.phone_sent, it) },
@@ -110,11 +116,16 @@ private fun LoginScreen() {
     }
 }
 
-/** Sends the tokens to every connected watch node over the Data Layer (Bluetooth-encrypted). Returns the node names. */
-private fun sendToWatch(context: Context, tokens: Tokens): String {
+/**
+ * Sends the tokens, and the [credentials] only if the user asked to save them on the watch, to every connected watch
+ * node over the Data Layer (Bluetooth-encrypted, delivered only to this app signed with the same key). Returns the node names.
+ */
+private fun sendToWatch(context: Context, tokens: Tokens, credentials: Pair<String, String>?): String {
     val nodes = Tasks.await(Wearable.getNodeClient(context).connectedNodes)
     if (nodes.isEmpty()) throw IllegalStateException(context.getString(R.string.phone_no_watch))
-    val bytes = tokens.toJson().toByteArray()
+    val message = JSONObject(tokens.toJson())
+    credentials?.let { (email, password) -> message.put("email", email).put("password", password) }
+    val bytes = message.toString().toByteArray()
     val client = Wearable.getMessageClient(context)
     nodes.forEach { Tasks.await(client.sendMessage(it.id, "/toyota/tokens", bytes)) }
     return nodes.joinToString { it.displayName }

@@ -1,10 +1,15 @@
 package com.poiki.toyotawear
 
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageInstaller
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import com.poiki.toyotawear.core.Releases
 import com.poiki.toyotawear.core.Snapshot
 import com.poiki.toyotawear.core.Tokens
 import com.poiki.toyotawear.core.ToyotaApi
@@ -22,9 +27,9 @@ import java.io.IOException
 import java.net.URL
 
 /**
- * Single source of truth on the watch: encrypted tokens, the vehicle list, the last raw Toyota payloads
- * per vehicle (one JSON string each, the only cache), the Snapshot of the selected vehicle and a small
- * cached picture per car. No database, no background work.
+ * Single source of truth on the watch: encrypted tokens (and the password, only if the user saves it), the
+ * vehicle list, the last raw Toyota payloads per vehicle (one JSON string each, the only cache), the Snapshot
+ * of the selected vehicle, a small cached picture per car and the self-update. No database, no background work.
  */
 object Store {
     data class CommandResult(val at: Long, val text: String, val ok: Boolean)
@@ -39,15 +44,22 @@ object Store {
     val error = MutableStateFlow<String?>(null)
     /** Outcome of the last remote command; the UI shows it and vibrates once. */
     val result = MutableStateFlow<CommandResult?>(null)
+    /** A newer watch APK on GitHub, offered once per check. */
+    val update = MutableStateFlow<Releases.Apk?>(null)
 
     const val TEMP_MIN = 18.0
     const val TEMP_MAX = 29.0
     const val TEMP_STEP = 0.5
     private const val CLIMATE_MINUTES = 10
     private const val CAR_IMAGE_WIDTH = 320
+    private const val CREDENTIALS = "credentials"
+    private const val WATCH_APK = "wear-for-toyota-watch"
+    private const val UPDATE_CHECK_MS = 24 * 3600_000L
 
     private lateinit var app: Context
     private lateinit var vault: Vault
+    /** The saved password, only if the user asked for it: its own strict Keystore key. */
+    private lateinit var secrets: Vault
     private lateinit var cache: SharedPreferences
     private val api = ToyotaApi { freshTokens() }
     private val climateSaved = mutableMapOf<String, JSONObject?>()
@@ -60,6 +72,7 @@ object Store {
         if (::vault.isInitialized) return
         app = context.applicationContext
         vault = Vault(app)
+        secrets = Vault(app, "toyota-credentials", strict = true)
         cache = app.getSharedPreferences("cache", Context.MODE_PRIVATE)
         tokens.value = runCatching { vault.read("tokens")?.let(Tokens::fromJson) }.getOrNull()
         vehicles.value = cache.getString("vehicles", null)
@@ -87,8 +100,16 @@ object Store {
         tokens.value = t
     }
 
+    /** Keeps the password under the strict key, or forgets it when [password] is null. False when this watch's Keystore refused it. */
+    fun saveCredentials(email: String, password: String?): Boolean {
+        secrets.write(CREDENTIALS, null)
+        if (password == null) return true
+        return runCatching { secrets.write(CREDENTIALS, JSONObject().put("email", email).put("password", password).toString()) }.isSuccess
+    }
+
     fun unlink() {
         saveTokens(null)
+        secrets.write(CREDENTIALS, null)
         cache.edit().clear().apply()
         vehicles.value.forEach { carFile(it.optString("vin")).delete() }
         vehicles.value = emptyList()
@@ -100,9 +121,10 @@ object Store {
         error.value = null
     }
 
-    /** Standalone login on the watch. The password is used once and never stored. */
-    suspend fun login(email: String, password: String, brand: String) = work(R.string.busy_login) {
+    /** Standalone login on the watch. The password is kept only with [savePassword], to sign in again when the session dies. */
+    suspend fun login(email: String, password: String, brand: String, savePassword: Boolean) = work(R.string.busy_login) {
         saveTokens(ToyotaAuth.login(email, password, brand))
+        if (!saveCredentials(email, password.takeIf { savePassword })) error.value = app.getString(R.string.err_save_password)
     }
 
     /** Vehicle list from the cache, or from Toyota when empty or [force]. Downloads each car's picture once. */
@@ -299,7 +321,62 @@ object Store {
     private fun freshTokens(): Tokens {
         val t = tokens.value ?: throw ToyotaLoginError("no tokens")
         if (t.isFresh()) return t
-        return ToyotaAuth.refresh(t).also { saveTokens(it) }
+        val next = try {
+            ToyotaAuth.refresh(t)
+        } catch (e: ToyotaLoginError) {
+            relogin(t.brand) ?: throw e
+        }
+        return next.also { saveTokens(it) }
+    }
+
+    /** The refresh token was rejected: sign in again with the saved password, if there is one. A rejected password is forgotten. */
+    private fun relogin(brand: String): Tokens? {
+        val saved = secrets.read(CREDENTIALS)?.let(::JSONObject) ?: return null
+        return try {
+            ToyotaAuth.login(saved.getString("email"), saved.getString("password"), brand)
+        } catch (e: ToyotaLoginError) {
+            secrets.write(CREDENTIALS, null)
+            throw e
+        }
+    }
+
+    /** At most once a day, counted from the last answer GitHub gave: one small request, silent when offline. */
+    suspend fun checkUpdate() = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        if (now - cache.getLong("updateCheckedAt", 0) < UPDATE_CHECK_MS) return@withContext
+        val current = app.packageManager.getPackageInfo(app.packageName, 0).versionName ?: return@withContext
+        runCatching { Releases.newer(current, WATCH_APK) }.onSuccess {
+            cache.edit().putLong("updateCheckedAt", now).apply()
+            update.value = it
+        }
+    }
+
+    /**
+     * Streams the APK straight into a PackageInstaller session. Android only accepts it if it is this app, signed
+     * with the same key and not older; then it asks the user to confirm and restarts the app ([InstallReceiver]).
+     */
+    suspend fun installUpdate(apk: Releases.Apk) = work(R.string.busy_update) {
+        val installer = app.packageManager.packageInstaller
+        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply { setAppPackageName(app.packageName) }
+        installer.openSession(installer.createSession(params)).use { session ->
+            try {
+                val download = URL(apk.url).openConnection().apply {
+                    connectTimeout = 20_000
+                    readTimeout = 20_000
+                }
+                download.getInputStream().use { input ->
+                    session.openWrite("update.apk", 0, -1).use { out ->
+                        input.copyTo(out)
+                        session.fsync(out)
+                    }
+                }
+                val status = PendingIntent.getBroadcast(app, 0, Intent(app, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                session.commit(status.intentSender)
+            } catch (e: Exception) {
+                session.abandon()
+                throw e
+            }
+        }
     }
 
     fun humanize(e: Throwable): String = when (e) {
@@ -314,5 +391,19 @@ object Store {
         }
         is IOException -> app.getString(R.string.err_offline)
         else -> app.getString(R.string.err_unknown, e.javaClass.simpleName)
+    }
+}
+
+/** PackageInstaller reports here (not exported, so nobody else can feed it intents): system confirmation, or why it failed. */
+class InstallReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.let { context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+            PackageInstaller.STATUS_SUCCESS, PackageInstaller.STATUS_FAILURE_ABORTED -> Unit // installed (the app restarts) or the user said no
+            else -> Store.error.value = context.getString(R.string.err_update, intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "")
+        }
     }
 }

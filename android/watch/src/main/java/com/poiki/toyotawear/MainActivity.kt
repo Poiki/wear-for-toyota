@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -24,12 +25,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
+import androidx.wear.compose.material3.AlertDialog
+import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ColorScheme
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SwipeToDismissBox
+import androidx.wear.compose.material3.Text
+import com.poiki.toyotawear.core.Releases
 import com.poiki.toyotawear.core.Tokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -102,11 +109,16 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
     val error by Store.error.collectAsState()
     val busy by Store.busy.collectAsState()
     val result by Store.result.collectAsState()
+    val update by Store.update.collectAsState()
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     var login by remember { mutableStateOf(false) }
+    var offer by remember { mutableStateOf<Releases.Apk?>(null) } // outlives Store.update so the dialog can animate out
     val stack = remember { mutableStateListOf(Route.Garage) }
 
+    LaunchedEffect(Unit) { Store.checkUpdate() }
+    LaunchedEffect(update) { update?.let { offer = it } }
     LaunchedEffect(tokens) {
         if (tokens != null) {
             login = false
@@ -129,15 +141,38 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
                 "app" -> Stack(stack, onMap, unlockGate)
                 "login" -> SwipeToDismissBox(onDismissed = { login = false }) { isBackground ->
                     if (isBackground) {
-                        LinkScreen(error = null, onLoginHere = {})
+                        LinkScreen(busy = null, error = null, onLoginHere = {})
                     } else {
-                        LoginScreen(busy = busy, error = error) { email, password, lexus ->
-                            scope.launch { Store.login(email, password, if (lexus) "L" else "T") }
+                        LoginScreen(busy = busy, error = error) { email, password, lexus, savePassword ->
+                            scope.launch { Store.login(email, password, if (lexus) "L" else "T", savePassword) }
                         }
                     }
                 }
-                else -> LinkScreen(error = error, onLoginHere = { Store.error.value = null; login = true })
+                else -> LinkScreen(busy = busy, error = error, onLoginHere = { Store.error.value = null; login = true })
             }
+        }
+        offer?.let { apk ->
+            AlertDialog(
+                visible = update != null,
+                onDismissRequest = { Store.update.value = null },
+                confirmButton = {
+                    AlertDialogDefaults.ConfirmButton(onClick = {
+                        if (context.packageManager.canRequestPackageInstalls()) {
+                            Store.update.value = null
+                            scope.launch { Store.installUpdate(apk) }
+                        } else {
+                            // One-time "Install unknown apps" switch for this app; the offer stays up for when the user comes back.
+                            runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))) }
+                                .onFailure {
+                                    Store.update.value = null
+                                    Store.error.value = context.getString(R.string.err_install_permission)
+                                }
+                        }
+                    })
+                },
+                title = { Text(stringResource(R.string.update_title, apk.version)) },
+                text = { Text(stringResource(R.string.update_text)) },
+            )
         }
     }
 }

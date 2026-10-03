@@ -5,8 +5,9 @@
     <string name="phone_email">MyToyota email</string>
     <string name="phone_password">Password</string>
     <string name="phone_lexus">It\'s a Lexus</string>
+    <string name="phone_save">Save the password on the watch (encrypted)</string>
     <string name="phone_button">Sign in and send to watch</string>
-    <string name="phone_note">Credentials are used once and never stored on the phone.</string>
+    <string name="phone_note">Nothing is stored on the phone. The password only travels to the watch if you choose to save it.</string>
     <string name="phone_busy">Signing in to Toyota…</string>
     <string name="phone_sent">Tokens sent to the watch (%1$s). You can close this app.</string>
     <string name="phone_no_watch">No watch connected to this phone</string>

@@ -12,8 +12,10 @@
     <string name="email">E-mail</string>
     <string name="password">Mot de passe</string>
     <string name="is_lexus">C\'est une Lexus</string>
+    <string name="save_password">Enregistrer le mot de passe</string>
     <string name="sign_in">Se connecter</string>
     <string name="login_note">Le mot de passe sert une seule fois ; la montre ne garde qu\'un jeton chiffré.</string>
+    <string name="login_note_saved">Chiffré avec une clé qui ne quitte jamais le coffre sécurisé de la montre ; utilisé seulement si la session expire.</string>
 
     <string name="locked">Verrouillée</string>
     <string name="locked_door_open">Verrouillée · porte ouverte</string>
@@ -52,6 +54,7 @@
     <string name="busy_refresh">Mise à jour…</string>
     <string name="busy_sending">Envoi…</string>
     <string name="busy_verifying">Vérification…</string>
+    <string name="busy_update">Téléchargement de la mise à jour…</string>
 
     <string name="result_locked">Véhicule verrouillé</string>
     <string name="result_unlocked">Véhicule déverrouillé</string>
@@ -74,5 +77,11 @@
     <string name="err_no_response">La voiture ne répond pas ; dernières données affichées</string>
     <string name="err_no_maps">Aucune app de cartes sur la montre</string>
     <string name="err_watch_locked">Déverrouillez d\'abord la montre</string>
+    <string name="err_save_password">Connecté, mais cette montre ne peut pas garder le mot de passe en sécurité ; il n\'a pas été enregistré.</string>
+    <string name="err_update">Échec de la mise à jour : %1$s</string>
+    <string name="err_install_permission">Cette montre masque l\'option « Installer des applis inconnues ». Activez-la une fois avec adb (voir README).</string>
     <string name="map_label">Voiture</string>
+
+    <string name="update_title">Version %1$s disponible</string>
+    <string name="update_text">La télécharger et l\'installer maintenant ?</string>
 </resources>

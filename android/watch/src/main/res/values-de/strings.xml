@@ -12,8 +12,10 @@
     <string name="email">E-Mail</string>
     <string name="password">Passwort</string>
     <string name="is_lexus">Es ist ein Lexus</string>
+    <string name="save_password">Passwort speichern</string>
     <string name="sign_in">Anmelden</string>
     <string name="login_note">Das Passwort wird einmal verwendet; die Uhr speichert nur ein verschlüsseltes Token.</string>
+    <string name="login_note_saved">Verschlüsselt mit einem Schlüssel, der den sicheren Schlüsselspeicher der Uhr nie verlässt; nur bei abgelaufener Sitzung verwendet.</string>
 
     <string name="locked">Verriegelt</string>
     <string name="locked_door_open">Verriegelt · Tür offen</string>
@@ -52,6 +54,7 @@
     <string name="busy_refresh">Aktualisiere…</string>
     <string name="busy_sending">Senden…</string>
     <string name="busy_verifying">Prüfen…</string>
+    <string name="busy_update">Update wird geladen…</string>
 
     <string name="result_locked">Fahrzeug verriegelt</string>
     <string name="result_unlocked">Fahrzeug entriegelt</string>
@@ -74,5 +77,11 @@
     <string name="err_no_response">Das Auto antwortet nicht; letzte Daten werden angezeigt</string>
     <string name="err_no_maps">Keine Karten-App auf der Uhr</string>
     <string name="err_watch_locked">Zuerst die Uhr entsperren</string>
+    <string name="err_save_password">Angemeldet, aber diese Uhr kann das Passwort nicht sicher speichern; es wurde nicht gespeichert.</string>
+    <string name="err_update">Update fehlgeschlagen: %1$s</string>
+    <string name="err_install_permission">Diese Uhr blendet den Schalter „Unbekannte Apps installieren“ aus. Einmal per adb aktivieren (siehe README).</string>
     <string name="map_label">Auto</string>
+
+    <string name="update_title">Version %1$s verfügbar</string>
+    <string name="update_text">Jetzt herunterladen und installieren?</string>
 </resources>

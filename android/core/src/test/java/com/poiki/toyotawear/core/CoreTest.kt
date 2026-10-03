@@ -2,13 +2,14 @@ package com.poiki.toyotawear.core
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
 import java.util.Base64
 
-/** One check per non-trivial piece: Toyota payload parsing (real pytoyoda fixtures) and the login helpers. */
+/** One check per non-trivial piece: Toyota payload parsing (real pytoyoda fixtures), the login helpers and the update check. */
 class CoreTest {
     private fun fixture(name: String) = JSONObject(javaClass.getResource("/$name")!!.readText())
 
@@ -82,5 +83,23 @@ class CoreTest {
         assertEquals("u-1", tokens.uuid)
         assertTrue(tokens.isFresh())
         assertEquals(tokens, Tokens.fromJson(tokens.toJson()))
+    }
+
+    @Test
+    fun releasePicksNewerWatchApk() {
+        assertTrue(Releases.isNewer("0.10.0", "0.9.1"))
+        assertTrue(Releases.isNewer("1.0", "0.9.9"))
+        assertFalse(Releases.isNewer("0.2.0", "0.2.0"))
+        assertFalse(Releases.isNewer("0.1.9", "0.2"))
+
+        val release = JSONObject(
+            """{"tag_name":"v0.2.0","assets":[
+                {"name":"wear-for-toyota-phone-0.2.0.apk","browser_download_url":"https://x/phone.apk"},
+                {"name":"wear-for-toyota-watch-0.2.0.apk","browser_download_url":"https://x/watch.apk"}]}""",
+        )
+        val apk = Releases.pick(release, "0.1.0", "wear-for-toyota-watch")!!
+        assertEquals("0.2.0", apk.version)
+        assertEquals("https://x/watch.apk", apk.url)
+        assertNull(Releases.pick(release, "0.2.0", "wear-for-toyota-watch"))
     }
 }

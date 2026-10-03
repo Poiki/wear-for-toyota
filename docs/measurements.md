@@ -57,3 +57,12 @@ Pendiente de medir con dispositivos reales: tráfico por apertura (`dumpsys nets
 | phone-release.apk | 2,30 MB |
 
 Tests del núcleo: 4/4.
+
+## 2026-10-03 — release 0.2.0
+
+| Artefacto | Tamaño |
+|---|---|
+| watch-release.apk (+ contraseña opcional y auto-update) | 2,88 MB (+6,8 KB) |
+| phone-release.apk | 2,30 MB |
+
+Tests del núcleo: 5/5. Comprobación de actualizaciones: 1 petición a `api.github.com` como mucho al día (solo tras una respuesta correcta); en el emulador la descarga del APK de 2,9 MB a la sesión de PackageInstaller tardó ~1 s.

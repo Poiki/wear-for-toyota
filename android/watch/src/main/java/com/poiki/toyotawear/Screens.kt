@@ -112,7 +112,10 @@ fun GarageScreen(
                     )
                 }
             }
-            if (vehicles.isNotEmpty()) error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
+            if (vehicles.isNotEmpty()) {
+                busy?.let { item { StatusLine(it, working = true) } }
+                error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
+            }
             item { OutlinedButton(onClick = onUnlink, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.unlink)) } }
         }
     }
@@ -301,7 +304,7 @@ fun ClimateScreen(
 private const val ROTARY_STEP_PX = 48f
 
 @Composable
-fun LinkScreen(error: String?, onLoginHere: () -> Unit) {
+fun LinkScreen(busy: String?, error: String?, onLoginHere: () -> Unit) {
     val state = rememberTransformingLazyColumnState()
     ScreenScaffold(scrollState = state) { padding ->
         TransformingLazyColumn(state = state, contentPadding = padding) {
@@ -315,17 +318,19 @@ fun LinkScreen(error: String?, onLoginHere: () -> Unit) {
                     label = { Text(stringResource(R.string.login_here)) },
                 )
             }
+            busy?.let { item { StatusLine(it, working = true) } }
             error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
         }
     }
 }
 
-/** Standalone login on the watch with the system keyboard. */
+/** Standalone login on the watch with the system keyboard. Saving the password is opt-in. */
 @Composable
-fun LoginScreen(busy: String?, error: String?, onSubmit: (email: String, password: String, lexus: Boolean) -> Unit) {
+fun LoginScreen(busy: String?, error: String?, onSubmit: (email: String, password: String, lexus: Boolean, savePassword: Boolean) -> Unit) {
     val email = rememberTextFieldState()
     val password = rememberTextFieldState()
     var lexus by remember { mutableStateOf(false) }
+    var savePassword by remember { mutableStateOf(false) }
     val state = rememberTransformingLazyColumnState()
     ScreenScaffold(scrollState = state) { padding ->
         TransformingLazyColumn(state = state, contentPadding = padding) {
@@ -333,15 +338,16 @@ fun LoginScreen(busy: String?, error: String?, onSubmit: (email: String, passwor
             item { Field(email, stringResource(R.string.email), KeyboardType.Email) }
             item { Field(password, stringResource(R.string.password), KeyboardType.Password, secure = true) }
             item { SwitchButton(checked = lexus, onCheckedChange = { lexus = it }, modifier = Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.is_lexus)) }) }
+            item { SwitchButton(checked = savePassword, onCheckedChange = { savePassword = it }, modifier = Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.save_password)) }) }
             item {
                 Button(
-                    onClick = { onSubmit(email.text.toString().trim(), password.text.toString(), lexus) },
+                    onClick = { onSubmit(email.text.toString().trim(), password.text.toString(), lexus, savePassword) },
                     enabled = busy == null && email.text.isNotBlank() && password.text.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
                 ) { Text(busy ?: stringResource(R.string.sign_in)) }
             }
             error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
-            item { Centered(stringResource(R.string.login_note), MaterialTheme.typography.labelSmall, MaterialTheme.colorScheme.onSurfaceVariant) }
+            item { Centered(stringResource(if (savePassword) R.string.login_note_saved else R.string.login_note), MaterialTheme.typography.labelSmall, MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }

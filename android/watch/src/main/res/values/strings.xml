@@ -12,8 +12,10 @@
     <string name="email">Email</string>
     <string name="password">Password</string>
     <string name="is_lexus">It\'s a Lexus</string>
+    <string name="save_password">Save password</string>
     <string name="sign_in">Sign in</string>
     <string name="login_note">Your password is used once; the watch only keeps an encrypted token.</string>
+    <string name="login_note_saved">Encrypted with a key that never leaves the watch\'s secure key store; used only if the session expires.</string>
 
     <string name="locked">Locked</string>
     <string name="locked_door_open">Locked · door open</string>
@@ -52,6 +54,7 @@
     <string name="busy_refresh">Updating…</string>
     <string name="busy_sending">Sending…</string>
     <string name="busy_verifying">Verifying…</string>
+    <string name="busy_update">Downloading update…</string>
 
     <string name="result_locked">Vehicle locked</string>
     <string name="result_unlocked">Vehicle unlocked</string>
@@ -74,5 +77,11 @@
     <string name="err_no_response">The car is not responding; showing last known data</string>
     <string name="err_no_maps">No maps app on the watch</string>
     <string name="err_watch_locked">Unlock the watch first</string>
+    <string name="err_save_password">Signed in, but this watch can\'t keep the password securely, so it wasn\'t saved.</string>
+    <string name="err_update">Update failed: %1$s</string>
+    <string name="err_install_permission">This watch hides the “Install unknown apps” switch. Turn it on once with adb (see README).</string>
     <string name="map_label">Car</string>
+
+    <string name="update_title">Version %1$s available</string>
+    <string name="update_text">Download and install it now?</string>
 </resources>

@@ -12,8 +12,10 @@
     <string name="email">E-mail</string>
     <string name="password">Password</string>
     <string name="is_lexus">È una Lexus</string>
+    <string name="save_password">Salva password</string>
     <string name="sign_in">Accedi</string>
     <string name="login_note">La password si usa una sola volta; l\'orologio salva solo un token cifrato.</string>
+    <string name="login_note_saved">Cifrata con una chiave che non lascia mai l\'archivio sicuro dell\'orologio; usata solo se la sessione scade.</string>
 
     <string name="locked">Chiusa</string>
     <string name="locked_door_open">Chiusa · porta aperta</string>
@@ -52,6 +54,7 @@
     <string name="busy_refresh">Aggiornamento…</string>
     <string name="busy_sending">Invio…</string>
     <string name="busy_verifying">Verifica…</string>
+    <string name="busy_update">Download dell\'aggiornamento…</string>
 
     <string name="result_locked">Veicolo chiuso</string>
     <string name="result_unlocked">Veicolo aperto</string>
@@ -74,5 +77,11 @@
     <string name="err_no_response">L\'auto non risponde; mostrati gli ultimi dati</string>
     <string name="err_no_maps">Nessuna app di mappe sull\'orologio</string>
     <string name="err_watch_locked">Sblocca prima l\'orologio</string>
+    <string name="err_save_password">Accesso eseguito, ma questo orologio non può custodire la password in modo sicuro; non è stata salvata.</string>
+    <string name="err_update">Aggiornamento non riuscito: %1$s</string>
+    <string name="err_install_permission">Questo orologio nasconde l\'opzione «Installa app sconosciute». Attivala una volta con adb (vedi README).</string>
     <string name="map_label">Auto</string>
+
+    <string name="update_title">Versione %1$s disponibile</string>
+    <string name="update_text">Scaricarla e installarla ora?</string>
 </resources>

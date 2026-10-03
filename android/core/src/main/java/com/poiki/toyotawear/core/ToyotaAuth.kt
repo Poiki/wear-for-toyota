@@ -25,6 +25,7 @@ object ToyotaAuth {
         val headers = mapOf("content-type" to "application/json", "accept" to "application/json", "user-agent" to ToyotaConst.USER_AGENT)
         repeat(10) {
             val r = Http.request("POST", ToyotaConst.AUTHENTICATE, headers, data.toString().toByteArray())
+            if (r.code == 429 || r.code >= 500) throw ToyotaError(r.code, null, "authenticate ${r.code}")
             if (r.code != 200) throw ToyotaLoginError("Toyota rechazó el inicio de sesión (${r.code})")
             data = JSONObject(r.body)
             if (data.has("tokenId")) return data.getString("tokenId")
@@ -50,6 +51,7 @@ object ToyotaAuth {
     private fun authorize(tokenId: String): String {
         val headers = mapOf("cookie" to "iPlanetDirectoryPro=$tokenId", "user-agent" to ToyotaConst.USER_AGENT)
         val r = Http.request("GET", ToyotaConst.AUTHORIZE, headers, followRedirects = false)
+        if (r.code == 429 || r.code >= 500) throw ToyotaError(r.code, null, "authorize ${r.code}")
         if (r.code != 302) throw ToyotaLoginError("Autorización rechazada (${r.code})")
         return codeFromLocation(r.location ?: "") ?: throw ToyotaLoginError("Toyota no devolvió código de autorización")
     }

@@ -15,6 +15,8 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 - **Cerrar / Abrir**: una sola pantalla con ambas acciones. Abrir pide confirmación en pantalla. Tras cada orden la app despierta al coche y verifica su estado real antes de decirte "Vehículo cerrado".
 - **Climatizador**: una esfera que giras con la corona o con los botones +/− (18–29 °C); encender o apagar durante 10 minutos.
 - **Autónoma**: el reloj habla con Toyota por sí mismo por Wi-Fi o LTE, o a través del Bluetooth del móvil emparejado. La app de móvil es opcional.
+- **Mantiene la sesión**: el refresh token de Toyota mantiene la sesión. Si quieres, guarda la contraseña al iniciar sesión (desactivado por defecto, cifrada con su propia clave) y el reloj volverá a entrar solo si Toyota cierra la sesión.
+- **Se actualiza sola**: como mucho una vez al día, al abrirla, el reloj busca una release nueva en GitHub y te ofrece instalarla.
 - **Pensada para la batería**: sin sondeos en segundo plano, sin servicios, un único fichero de estado cifrado. Solo se despierta al coche cuando tú lo pides.
 
 ## Requisitos
@@ -46,16 +48,28 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
    adb -s <serial-del-reloj> install -r android/watch/build/outputs/apk/release/watch-release.apk
    ```
 
+   También puedes saltarte el paso 1: descarga `wear-for-toyota-watch-<versión>.apk` de la [última release](https://github.com/Poiki/wear-for-toyota/releases/latest) e instálalo igual. Solo los APK oficiales firmados pueden recibir las actualizaciones oficiales.
+
 4. Inicia sesión de cualquiera de las dos formas:
    - **En el reloj**: abre la app → "Iniciar sesión aquí" → escribe el email y la contraseña de MyToyota con el teclado del reloj.
    - **Desde el móvil** (opcional): instala `phone-release.apk` en el móvil emparejado con `adb install -r`, abre "Wear para Toyota" e inicia sesión. Los tokens viajan al reloj por el enlace Bluetooth; el móvil no guarda nada.
 
-5. Opcional, para una release firmada con tu clave: crea `android/keystore.properties` con `storeFile`, `storePassword`, `keyAlias` y `keyPassword`. Está ignorado por git y se usa automáticamente. Los dos APK deben compartir firma para que funcione el enlace móvil → reloj.
+   Activa "Guardar contraseña" solo si quieres que el reloj vuelva a entrar solo cuando Toyota cierre la sesión.
+
+5. Actualizaciones: cuando sale una release nueva, la app te la ofrece. La primera vez, el reloj abre el interruptor "Instalar apps desconocidas" de Wear para Toyota: actívalo, vuelve atrás y acepta otra vez. Después el instalador de Android te pide confirmación. Si tu reloj oculta ese interruptor, concédelo una vez desde el ordenador:
+
+   ```bash
+   adb -s <serial-del-reloj> shell appops set com.poiki.toyotawear REQUEST_INSTALL_PACKAGES allow
+   ```
+
+6. Opcional, para una release firmada con tu clave: crea `android/keystore.properties` con `storeFile`, `storePassword`, `keyAlias` y `keyPassword`. Está ignorado por git y se usa automáticamente. Los dos APK deben compartir firma para que funcione el enlace móvil → reloj. Android rechaza actualizaciones firmadas con otra clave, así que las copias firmadas con tu clave o con la clave debug no pueden instalar las releases oficiales que ofrece la app.
 
 ## Seguridad y privacidad
 
-- La contraseña se usa una sola vez, en el inicio de sesión, y nunca se guarda. El reloj conserva los tokens OAuth cifrados con una clave que vive en el Android Keystore; las copias de seguridad están desactivadas.
-- Sin analítica ni servidores de terceros. El reloj solo habla con los servidores de Toyota (`*.toyotaconnectedeurope.io`, `b2c-login.toyota-europe.com`) y, una vez por coche, con el CDN de imágenes de Toyota.
+- La contraseña no se guarda salvo que actives "Guardar contraseña" al iniciar sesión. En ese caso el reloj la cifra con su propia clave AES-256 en el Android Keystore (en StrongBox si el reloj lo tiene). Esa clave solo funciona con el reloj desbloqueado, si tiene bloqueo de pantalla. El reloj solo lee la contraseña para volver a entrar cuando Toyota cierra la sesión, y la borra si Toyota la rechaza. Si el Keystore del reloj no puede protegerla así, no se guarda y la app te avisa.
+- Los tokens OAuth siempre se guardan cifrados con una clave que vive en el Android Keystore; las copias de seguridad están desactivadas. "Desvincular" borra tokens, contraseña y datos en caché.
+- Sin analítica ni servidores de terceros. El reloj solo habla con los servidores de Toyota (`*.toyotaconnectedeurope.io`, `b2c-login.toyota-europe.com`), una vez por coche con el CDN de imágenes de Toyota y, como mucho una vez al día, con GitHub (`api.github.com`) para buscar una release nueva. El APK solo se descarga de GitHub después de que aceptes.
+- Las actualizaciones las instala el propio instalador de Android, tras tu confirmación. Android solo instala el APK si es esta app, firmada con la misma clave y no más antigua, así que rechaza un APK manipulado o ajeno.
 - Los identificadores estáticos de la app oficial (client id, API key) son los públicos documentados por pytoyoda. Toyota puede cambiarlos.
 - Abrir pide confirmación pero, por diseño, no un PIN del reloj. Quien lleve un reloj desbloqueado podría abrir tu coche. Si quieres esa barrera, configura un bloqueo de pantalla en el reloj: la app exigirá entonces que esté desbloqueado.
 - Los logs nunca contienen tokens ni credenciales. Las ayudas de depuración (inyección de tokens, modo demo) no existen en los builds release.
