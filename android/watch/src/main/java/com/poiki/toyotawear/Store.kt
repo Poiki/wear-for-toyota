@@ -34,7 +34,8 @@ import java.net.URL
 object Store {
     data class CommandResult(val at: Long, val text: String, val ok: Boolean)
 
-    val tokens = MutableStateFlow<Tokens?>(null)
+    /** Tokens are on the watch. They are only decrypted for the first request: the Keystore costs ~60 ms at startup. */
+    val linked = MutableStateFlow(false)
     val vehicles = MutableStateFlow<List<JSONObject>>(emptyList())
     val selectedVin = MutableStateFlow<String?>(null)
     val snapshot = MutableStateFlow<Snapshot?>(null)
@@ -46,6 +47,8 @@ object Store {
     val result = MutableStateFlow<CommandResult?>(null)
     /** A newer watch APK on GitHub, offered once per check. */
     val update = MutableStateFlow<Releases.Apk?>(null)
+    /** The update APK is downloading. */
+    val updating = MutableStateFlow(false)
 
     const val TEMP_MIN = 18.0
     const val TEMP_MAX = 29.0
@@ -55,7 +58,10 @@ object Store {
     private const val CREDENTIALS = "credentials"
     private const val WATCH_APK = "wear-for-toyota-watch"
     private const val UPDATE_CHECK_MS = 24 * 3600_000L
+    /** Data read this recently (e.g. prefetched while the garage was showing) is shown at once; older data never is. */
+    private const val FRESH_MS = 2 * 60_000L
 
+    @Volatile private var tokens: Tokens? = null
     private lateinit var app: Context
     private lateinit var vault: Vault
     /** The saved password, only if the user asked for it: its own strict Keystore key. */
@@ -74,22 +80,23 @@ object Store {
         vault = Vault(app)
         secrets = Vault(app, "toyota-credentials", strict = true)
         cache = app.getSharedPreferences("cache", Context.MODE_PRIVATE)
-        tokens.value = runCatching { vault.read("tokens")?.let(Tokens::fromJson) }.getOrNull()
+        linked.value = vault.has("tokens")
         vehicles.value = cache.getString("vehicles", null)
             ?.let { s -> runCatching { JSONArray(s).let { a -> List(a.length()) { i -> a.getJSONObject(i) } } }.getOrNull() }
             ?: emptyList()
         selectedVin.value = cache.getString("selected", null) ?: vehicles.value.firstOrNull()?.optString("vin")
-        snapshot.value = selectedVin.value?.let(::raw)?.let { runCatching { Snapshot.from(it) }.getOrNull() }
         carImages.value = vehicles.value.mapNotNull { v ->
             val vin = v.optString("vin")
             carFile(vin).takeIf { it.exists() }?.let { f -> BitmapFactory.decodeFile(f.path)?.let { vin to it } }
         }.toMap()
     }
 
+    /** Opens a car: its data only if it was read moments ago, otherwise the screen waits for Toyota. */
     fun select(vin: String) {
         selectedVin.value = vin
         cache.edit().putString("selected", vin).apply()
-        snapshot.value = raw(vin)?.let { runCatching { Snapshot.from(it) }.getOrNull() }
+        snapshot.value = raw(vin)?.takeIf { System.currentTimeMillis() - it.optLong("fetchedAt") < FRESH_MS }
+            ?.let { runCatching { Snapshot.from(it) }.getOrNull() }
         climateTemp.value = null
         result.value = null
         error.value = null
@@ -97,7 +104,8 @@ object Store {
 
     fun saveTokens(t: Tokens?) {
         vault.write("tokens", t?.toJson())
-        tokens.value = t
+        tokens = t
+        linked.value = t != null
     }
 
     /** Keeps the password under the strict key, or forgets it when [password] is null. False when this watch's Keystore refused it. */
@@ -127,24 +135,25 @@ object Store {
         if (!saveCredentials(email, password.takeIf { savePassword })) error.value = app.getString(R.string.err_save_password)
     }
 
-    /** Vehicle list from the cache, or from Toyota when empty or [force]. Downloads each car's picture once. */
-    suspend fun loadVehicles(force: Boolean = false) = work(R.string.busy_vehicles) {
-        if (vehicles.value.isNotEmpty() && !force) return@work
+    /** Vehicle list from the cache, or from Toyota once. The garage lists the cars only when their pictures are ready (or failed). */
+    suspend fun loadVehicles() = work(R.string.busy_vehicles) {
+        if (vehicles.value.isNotEmpty()) return@work
         val all = api.vehicles()
         val list = List(all.length()) { all.getJSONObject(it) }
         if (list.isEmpty()) throw ToyotaError(404, null, "no vehicles")
-        cache.edit().putString("vehicles", all.toString()).apply()
-        vehicles.value = list
-        if (list.none { it.optString("vin") == selectedVin.value }) select(list.first().getString("vin"))
         list.forEach { v ->
             val vin = v.getString("vin")
             if (carImages.value[vin] == null) runCatching { fetchCarImage(vin, v.optString("image")) }
         }
+        cache.edit().putString("vehicles", all.toString()).apply()
+        vehicles.value = list
+        if (list.none { it.optString("vin") == selectedVin.value }) select(list.first().getString("vin"))
     }
 
     /** Reads the selected vehicle; with [wake] it first asks the car for fresh status and polls until its timestamp advances. */
     suspend fun refresh(wake: Boolean) = work(if (wake) R.string.busy_wake else R.string.busy_refresh) {
-        val (vin, vehicle) = current() ?: return@work
+        // An error, not a silent return: the vehicle screen retries automatically only while there is no error.
+        val (vin, vehicle) = current() ?: throw ToyotaError(404, null, "selected vehicle not in the list")
         readAll(vin, vehicle, wake)
     }
 
@@ -224,7 +233,8 @@ object Store {
         store("DEMO", raw)
         select("DEMO")
         climateTemp.value = 21.0
-        tokens.value = Tokens("demo", "demo", Long.MAX_VALUE, "demo", "T") // in memory only; real calls fail with 401
+        tokens = Tokens("demo", "demo", Long.MAX_VALUE, "demo", "T") // in memory only; real calls fail with 401
+        linked.value = true
     }
 
     private suspend fun work(label: Int, block: suspend () -> Unit) = withContext(Dispatchers.IO) {
@@ -234,7 +244,7 @@ object Store {
         try {
             block()
         } catch (e: ToyotaLoginError) {
-            if (tokens.value == null) {
+            if (!linked.value) {
                 error.value = app.getString(R.string.err_login)
             } else {
                 error.value = humanize(e)
@@ -270,9 +280,10 @@ object Store {
         if (!out.has("status")) out.put("status", api.status(vin))
         out.put("telemetry", optional { api.telemetry(vin) })
         if (Snapshot.isElectric(vehicle)) out.put("electric", optional { api.electric(vin) })
+        out.put("fetchedAt", System.currentTimeMillis())
+        store(vin, out) // the status face can show lock, energy and mileage now; position and climate follow
         out.put("location", optional { api.location(vin) })
         out.put("climate", optional { api.climateStatus(vin) })
-        out.put("fetchedAt", System.currentTimeMillis())
         store(vin, out)
     }
 
@@ -319,7 +330,9 @@ object Store {
 
     @Synchronized
     private fun freshTokens(): Tokens {
-        val t = tokens.value ?: throw ToyotaLoginError("no tokens")
+        val t = tokens
+            ?: runCatching { vault.read("tokens")?.let(Tokens::fromJson) }.getOrNull()?.also { tokens = it }
+            ?: throw ToyotaLoginError("no tokens")
         if (t.isFresh()) return t
         val next = try {
             ToyotaAuth.refresh(t)
@@ -355,27 +368,36 @@ object Store {
      * Streams the APK straight into a PackageInstaller session. Android only accepts it if it is this app, signed
      * with the same key and not older; then it asks the user to confirm and restarts the app ([InstallReceiver]).
      */
-    suspend fun installUpdate(apk: Releases.Apk) = work(R.string.busy_update) {
+    suspend fun installUpdate(apk: Releases.Apk) = withContext(Dispatchers.IO) {
+        if (updating.value) return@withContext
+        updating.value = true
         val installer = app.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply { setAppPackageName(app.packageName) }
-        installer.openSession(installer.createSession(params)).use { session ->
-            try {
-                val download = URL(apk.url).openConnection().apply {
-                    connectTimeout = 20_000
-                    readTimeout = 20_000
-                }
-                download.getInputStream().use { input ->
-                    session.openWrite("update.apk", 0, -1).use { out ->
-                        input.copyTo(out)
-                        session.fsync(out)
+        try {
+            installer.openSession(installer.createSession(params)).use { session ->
+                try {
+                    val download = URL(apk.url).openConnection().apply {
+                        connectTimeout = 20_000
+                        readTimeout = 20_000
                     }
+                    download.getInputStream().use { input ->
+                        session.openWrite("update.apk", 0, -1).use { out ->
+                            input.copyTo(out)
+                            session.fsync(out)
+                        }
+                    }
+                    val status = PendingIntent.getBroadcast(app, 0, Intent(app, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                    session.commit(status.intentSender)
+                } catch (e: Exception) {
+                    session.abandon()
+                    throw e
                 }
-                val status = PendingIntent.getBroadcast(app, 0, Intent(app, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
-                session.commit(status.intentSender)
-            } catch (e: Exception) {
-                session.abandon()
-                throw e
             }
+        } catch (e: Exception) {
+            Log.w("ToyotaWear", "update failed: ${e.javaClass.simpleName}: ${e.message}")
+            error.value = app.getString(R.string.err_update, humanize(e))
+        } finally {
+            updating.value = false
         }
     }
 

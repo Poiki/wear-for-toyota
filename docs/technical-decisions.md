@@ -30,10 +30,12 @@ Destilado de `toyota-api.md`, `toyota-auth.md`, `wearos-analysis.md`, `oem-wear-
 
 - Contenido: tokens cifrados con clave AES-GCM de `AndroidKeyStore` (Jetpack `security-crypto` está deprecado), `uuid`, VIN seleccionado, lista corta de vehículos (vin, alias, modelo, capabilities) y el **último snapshot** de estado (JSON de pocos KB con timestamps). Nada más: ni trips, ni historial, ni logs en disco.
 - Por qué: el snapshot permite pintar app, tile y complication al instante y distinguir "última información conocida" de "actual". Todo lo demás se pide bajo demanda.
+- 0.2.1 (petición del usuario): la app **no muestra un snapshot de más de 2 minutos** al abrir un coche; muestra un anillo de carga hasta que Toyota responde, para no enseñar un estado falso. El snapshot guardado solo sirve para comparar el timestamp tras un wake y para abrir al instante un coche leído hace un momento.
 
 ## 6. Sincronización: bajo demanda, nunca polling de fondo
 
-- Al abrir la app: GET `vehicle/status`, `telemetry`, `electric/status` (si EV/PHEV), `location`, `climate-status`, en serie (≈5 peticiones, <10 s).
+- Al abrir la app: GET `vehicle/status`, `telemetry`, `electric/status` (si EV/PHEV), `location`, `climate-status`, en serie (≈5 peticiones, <10 s). Desde 0.2.1 se piden para el último coche mientras se ve el garaje (al tocarlo suele estar listo) y la esfera de estado aparece tras las dos primeras (cierre, combustible, kilometraje); posición y clima llegan después.
+- Arranque (0.2.1, medido en OnePlus Watch 3): los tokens se descifran en la primera petición y no en `onCreate` (el Keystore costaba ~57 ms de los ~90 ms de `Store.init` en el hilo principal) y se desactiva `EmojiCompatInitializer` (la app no muestra emoji). Ver docs/measurements.md.
 - "Actualizar": POST `/v1/remote/status` (wake) → GET status a los 5, 10, 20 y 30 s hasta que `lastUpdateTimestamp` avance; presupuesto 30 s; si no avanza, "El coche no responde" conservando el dato anterior. Nunca wakes periódicos: cada wake gasta batería 12 V del coche (hay reportes de baterías agotadas con polling).
 - Tile: pinta el snapshot; botón "Actualizar" → `loadAction` con una sola GET dentro de los 10 s permitidos y `requestUpdate` al terminar; sin `freshnessInterval`. Complication: `UPDATE_PERIOD_SECONDS=0`, push desde la app tras cada refresco.
 - Sin WorkManager periódico, sin FCM (no hay servidor), sin servicios residentes.

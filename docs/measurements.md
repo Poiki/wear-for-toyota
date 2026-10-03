@@ -66,3 +66,22 @@ Tests del núcleo: 4/4.
 | phone-release.apk | 2,30 MB |
 
 Tests del núcleo: 5/5. Comprobación de actualizaciones: 1 petición a `api.github.com` como mucho al día (solo tras una respuesta correcta); en el emulador la descarga del APK de 2,9 MB a la sesión de PackageInstaller tardó ~1 s.
+
+## 2026-10-03 — arranque en el reloj real y release 0.2.1
+
+Arranque en frío de la 0.2.0 en el OnePlus Watch 3 (Wear OS 6, `speed-profile`, 4 medidas con marcas de tiempo temporales):
+
+| Tramo | Tiempo |
+|---|---|
+| Inicio del proceso → `onCreate` | 108–139 ms |
+| `Store.init` en el hilo principal | 89–107 ms: descifrar tokens con el Keystore 56–60, prefs 10–13, JSON + snapshot 8–18, una imagen 8–11 |
+| Primer frame | 268–336 ms desde el inicio del proceso |
+
+La 0.2.1 saca de `Store.init` el descifrado (se hace en la primera petición, ya en segundo plano) y el parseo del snapshot (ya no se muestran datos guardados), y desactiva `EmojiCompatInitializer`: quedan prefs + JSON + imagen (~25 ms estimados). Pendiente de confirmar en el reloj. OJO: en el cargador el overlay de carga de OnePlus tapa la app y `am start -W` no da `TotalTime`; las marcas de tiempo en logcat sí funcionan.
+
+| Artefacto | Tamaño |
+|---|---|
+| watch-release.apk (dos esferas, pager, texto autoajustable) | 2,95 MB (+65 KB) |
+| phone-release.apk | 2,30 MB |
+
+Comprobado en el emulador a 227 dp y a 192 dp (densidad 378) en los 6 idiomas: ningún texto parte línea ni se corta.

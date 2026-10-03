@@ -3,7 +3,6 @@
     <string name="app_name">Wear für Toyota</string>
 
     <string name="garage_title">Meine Garage</string>
-    <string name="no_vehicles">Keine Fahrzeuge</string>
     <string name="unlink">Trennen</string>
 
     <string name="link_hint">Uhr über die Telefon-App verbinden oder hier anmelden</string>
@@ -18,24 +17,21 @@
     <string name="login_note_saved">Verschlüsselt mit einem Schlüssel, der den sicheren Schlüsselspeicher der Uhr nie verlässt; nur bei abgelaufener Sitzung verwendet.</string>
 
     <string name="locked">Verriegelt</string>
-    <string name="locked_door_open">Verriegelt · Tür offen</string>
     <string name="unlocked">Entriegelt</string>
     <string name="lock_unknown">Status unbekannt</string>
-    <string name="range">Reichweite</string>
+    <string name="door_open">Tür offen</string>
     <string name="fuel">Kraftstoff</string>
     <string name="battery">Batterie</string>
     <string name="odometer">Kilometerstand</string>
     <string name="km_format">%1$s km</string>
+    <string name="range_format">%1$s km Reichweite</string>
 
-    <string name="remote_control">Fernsteuerung</string>
-    <string name="lock_unlock">Ver-/Entriegeln</string>
     <string name="climate">Klima</string>
-    <string name="last_position">Letzte Position</string>
+    <string name="map">Karte</string>
     <string name="refresh">Aktualisieren</string>
     <string name="lock">Verriegeln</string>
     <string name="unlock">Entriegeln</string>
     <string name="confirm_unlock">Auto entriegeln?</string>
-    <string name="no_data">Keine Daten</string>
     <string name="climate_on">An</string>
     <string name="climate_off">Aus</string>
     <string name="climate_starting">Startet</string>
@@ -44,6 +40,7 @@
     <string name="turn_off">Ausschalten</string>
 
     <string name="loading">Lädt…</string>
+    <string name="retry">Wiederholen</string>
     <string name="today">Heute</string>
     <string name="yesterday">Gestern</string>
     <string name="when_format">%1$s, %2$s</string>
@@ -74,7 +71,7 @@
     <string name="err_offline">Keine Verbindung.</string>
     <string name="err_unknown">Fehler: %1$s</string>
     <string name="err_wake_rejected">Das Auto hat die Anfrage abgelehnt</string>
-    <string name="err_no_response">Das Auto antwortet nicht; letzte Daten werden angezeigt</string>
+    <string name="err_no_response">Das Auto hat nicht geantwortet</string>
     <string name="err_no_maps">Keine Karten-App auf der Uhr</string>
     <string name="err_watch_locked">Zuerst die Uhr entsperren</string>
     <string name="err_save_password">Angemeldet, aber diese Uhr kann das Passwort nicht sicher speichern; es wurde nicht gespeichert.</string>

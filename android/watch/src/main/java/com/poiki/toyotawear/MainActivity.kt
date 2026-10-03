@@ -80,7 +80,7 @@ class MainActivity : ComponentActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         Log.d("ToyotaWear", "keyDown $keyCode")
         if (keyCode == KeyEvent.KEYCODE_STEM_1 || keyCode == KeyEvent.KEYCODE_STEM_2 || keyCode == KeyEvent.KEYCODE_STEM_3) {
-            if (Store.tokens.value != null) lifecycleScope.launch { Store.refresh(wake = true) }
+            if (Store.linked.value) lifecycleScope.launch { Store.refresh(wake = true) }
             return true
         }
         return super.onKeyDown(keyCode, event)
@@ -101,15 +101,16 @@ private fun ToyotaTheme(content: @Composable () -> Unit) = MaterialTheme(
     content = content,
 )
 
-private enum class Route { Garage, Vehicle, Lock, Climate }
+private enum class Route { Garage, Vehicle, Climate }
 
 @Composable
 private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
-    val tokens by Store.tokens.collectAsState()
+    val linked by Store.linked.collectAsState()
     val error by Store.error.collectAsState()
     val busy by Store.busy.collectAsState()
     val result by Store.result.collectAsState()
     val update by Store.update.collectAsState()
+    val updating by Store.updating.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -119,10 +120,11 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
 
     LaunchedEffect(Unit) { Store.checkUpdate() }
     LaunchedEffect(update) { update?.let { offer = it } }
-    LaunchedEffect(tokens) {
-        if (tokens != null) {
+    LaunchedEffect(linked) {
+        if (linked) {
             login = false
             Store.loadVehicles()
+            // Prefetch the last car while the garage shows: opening it is then usually instant.
             if (Store.snapshot.value == null) Store.refresh(wake = false)
         }
     }
@@ -130,7 +132,7 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
     BackHandler(enabled = login || stack.size > 1) { if (login) login = false else stack.removeAt(stack.size - 1) }
 
     val screen = when {
-        tokens != null -> "app"
+        linked -> "app"
         login -> "login"
         else -> "link"
     }
@@ -141,16 +143,19 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
                 "app" -> Stack(stack, onMap, unlockGate)
                 "login" -> SwipeToDismissBox(onDismissed = { login = false }) { isBackground ->
                     if (isBackground) {
-                        LinkScreen(busy = null, error = null, onLoginHere = {})
+                        LinkScreen(error = null, onLoginHere = {})
                     } else {
                         LoginScreen(busy = busy, error = error) { email, password, lexus, savePassword ->
                             scope.launch { Store.login(email, password, if (lexus) "L" else "T", savePassword) }
                         }
                     }
                 }
-                else -> LinkScreen(busy = busy, error = error, onLoginHere = { Store.error.value = null; login = true })
+                else -> LinkScreen(error = error, onLoginHere = { Store.error.value = null; login = true })
             }
         }
+        // One dialog for every command outcome, whichever screen sent it.
+        ResultDialogs(result)
+        if (updating) WaitFace(car = null, text = stringResource(R.string.busy_update), working = true)
         offer?.let { apk ->
             AlertDialog(
                 visible = update != null,
@@ -211,35 +216,36 @@ private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double
             onSelect = { vin ->
                 Store.select(vin)
                 stack.add(Route.Vehicle)
-                scope.launch { Store.refresh(wake = false) }
             },
+            onRetry = { scope.launch { Store.loadVehicles() } },
             onUnlink = { Store.unlink() },
         )
-        Route.Vehicle -> VehicleScreen(
-            snapshot = snapshot,
-            car = images[selectedVin],
-            busy = busy,
-            error = error,
-            onWake = { scope.launch { Store.refresh(wake = true) } },
-            onLock = { Store.result.value = null; stack.add(Route.Lock) },
-            onClimate = {
-                Store.result.value = null
-                stack.add(Route.Climate)
-                scope.launch { Store.loadClimateSettings() }
-            },
-            onMap = onMap,
-        )
-        Route.Lock -> LockScreen(
-            snapshot = snapshot,
-            busy = busy,
-            error = error,
-            result = result,
-            onLock = { scope.launch { Store.lock(true) } },
-            onUnlock = {
-                val reason = unlockGate()
-                if (reason != null) Store.error.value = reason else scope.launch { Store.lock(false) }
-            },
-        )
+        Route.Vehicle -> {
+            // Reads the car whenever it has no fresh data and nothing is running; an error waits for "Retry".
+            LaunchedEffect(selectedVin, snapshot == null, busy == null, error == null) {
+                if (snapshot == null && busy == null && error == null) Store.refresh(wake = false)
+            }
+            VehicleScreen(
+                snapshot = snapshot,
+                car = images[selectedVin],
+                busy = busy,
+                error = error,
+                onRetry = { Store.error.value = null },
+                onErrorShown = { Store.error.value = null },
+                onWake = { scope.launch { Store.refresh(wake = true) } },
+                onLock = { scope.launch { Store.lock(true) } },
+                onUnlock = {
+                    val reason = unlockGate()
+                    if (reason != null) Store.error.value = reason else scope.launch { Store.lock(false) }
+                },
+                onClimate = {
+                    Store.result.value = null
+                    stack.add(Route.Climate)
+                    scope.launch { Store.loadClimateSettings() }
+                },
+                onMap = onMap,
+            )
+        }
         Route.Climate -> ClimateScreen(
             snapshot = snapshot,
             temp = climateTemp ?: 21.0,

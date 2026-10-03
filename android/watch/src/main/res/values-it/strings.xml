@@ -3,7 +3,6 @@
     <string name="app_name">Wear per Toyota</string>
 
     <string name="garage_title">Il mio Garage</string>
-    <string name="no_vehicles">Nessun veicolo</string>
     <string name="unlink">Scollega</string>
 
     <string name="link_hint">Collega l\'orologio dall\'app del telefono o accedi qui</string>
@@ -18,24 +17,21 @@
     <string name="login_note_saved">Cifrata con una chiave che non lascia mai l\'archivio sicuro dell\'orologio; usata solo se la sessione scade.</string>
 
     <string name="locked">Chiusa</string>
-    <string name="locked_door_open">Chiusa · porta aperta</string>
     <string name="unlocked">Aperta</string>
     <string name="lock_unknown">Stato sconosciuto</string>
-    <string name="range">Autonomia</string>
+    <string name="door_open">Porta aperta</string>
     <string name="fuel">Carburante</string>
     <string name="battery">Batteria</string>
     <string name="odometer">Chilometraggio</string>
     <string name="km_format">%1$s km</string>
+    <string name="range_format">%1$s km di autonomia</string>
 
-    <string name="remote_control">Controllo remoto</string>
-    <string name="lock_unlock">Chiudi / Apri</string>
     <string name="climate">Clima</string>
-    <string name="last_position">Ultima posizione</string>
+    <string name="map">Mappa</string>
     <string name="refresh">Aggiorna</string>
     <string name="lock">Chiudi</string>
     <string name="unlock">Apri</string>
     <string name="confirm_unlock">Aprire l\'auto?</string>
-    <string name="no_data">Nessun dato</string>
     <string name="climate_on">Acceso</string>
     <string name="climate_off">Spento</string>
     <string name="climate_starting">In avvio</string>
@@ -44,6 +40,7 @@
     <string name="turn_off">Spegni</string>
 
     <string name="loading">Caricamento…</string>
+    <string name="retry">Riprova</string>
     <string name="today">Oggi</string>
     <string name="yesterday">Ieri</string>
     <string name="when_format">%1$s, %2$s</string>
@@ -74,7 +71,7 @@
     <string name="err_offline">Nessuna connessione.</string>
     <string name="err_unknown">Qualcosa è andato storto: %1$s</string>
     <string name="err_wake_rejected">L\'auto ha rifiutato la richiesta</string>
-    <string name="err_no_response">L\'auto non risponde; mostrati gli ultimi dati</string>
+    <string name="err_no_response">L\'auto non ha risposto</string>
     <string name="err_no_maps">Nessuna app di mappe sull\'orologio</string>
     <string name="err_watch_locked">Sblocca prima l\'orologio</string>
     <string name="err_save_password">Accesso eseguito, ma questo orologio non può custodire la password in modo sicuro; non è stata salvata.</string>

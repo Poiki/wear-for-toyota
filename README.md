@@ -11,8 +11,8 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 ## What it does
 
 - **My Garage**: one card per car on the account, with Toyota's own picture of the car.
-- **Vehicle**: locked / unlocked, range, fuel or battery, mileage, when the data was reported, and the last parked position (opens the maps app on the watch).
-- **Lock / Unlock**: one screen with both actions. Unlocking asks for an on-screen confirmation. After every command the app wakes the car and verifies the real state before telling you "Vehicle locked".
+- **Status dial**: locked / unlocked, fuel or battery with a gauge around the screen, range, mileage, and when the car last reported (tap it to wake the car for fresh data). Opening a car shows a loading ring until Toyota answers, so you never see old data.
+- **Controls dial** (swipe left): lock, unlock, climate and the last parked position (opens the maps app on the watch). Unlocking asks for an on-screen confirmation. After every command the app wakes the car and verifies the real state before telling you "Vehicle locked".
 - **Climate**: a dial you turn with the crown or the +/- buttons (18–29 °C); start or stop for 10 minutes.
 - **Standalone**: the watch talks to Toyota on its own over Wi-Fi or LTE, or through the Bluetooth proxy of the paired phone. The phone app is optional.
 - **Stays signed in**: Toyota's refresh token keeps the session alive. Optionally, save your password at sign-in (off by default, encrypted under its own key) and the watch signs in again by itself if Toyota ever ends the session.

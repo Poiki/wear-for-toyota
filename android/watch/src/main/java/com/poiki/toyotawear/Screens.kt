@@ -1,8 +1,11 @@
 package com.poiki.toyotawear
 
 import android.graphics.Bitmap
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -10,6 +13,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,15 +23,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicSecureTextField
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,9 +48,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -50,21 +61,31 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.foundation.pager.HorizontalPager
+import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
+import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.Button
+import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CircularProgressIndicator
+import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.ConfirmationDialog
 import androidx.wear.compose.material3.ConfirmationDialogDefaults
 import androidx.wear.compose.material3.EdgeButton
 import androidx.wear.compose.material3.EdgeButtonSize
-import androidx.wear.compose.material3.FilledTonalButton
+import androidx.wear.compose.material3.FilledIconButton
 import androidx.wear.compose.material3.FilledTonalIconButton
+import androidx.wear.compose.material3.HorizontalPagerScaffold
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.LocalTextStyle
 import androidx.wear.compose.material3.MaterialTheme
@@ -80,9 +101,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.roundToLong
+import kotlin.math.roundToInt
 
-/** "My Garage": one big card per car, like MyToyota's garage. */
+/** "My Garage": one big card per car. Nothing is listed until the cars and their pictures are ready. */
 @Composable
 fun GarageScreen(
     vehicles: List<JSONObject>,
@@ -90,20 +111,27 @@ fun GarageScreen(
     busy: String?,
     error: String?,
     onSelect: (String) -> Unit,
+    onRetry: () -> Unit,
     onUnlink: () -> Unit,
 ) {
+    if (vehicles.isEmpty()) {
+        WaitFace(car = null, text = error ?: stringResource(R.string.busy_vehicles), working = error == null) {
+            if (error != null) {
+                Button(onClick = onRetry, modifier = Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.retry)) }
+                OutlinedButton(onClick = onUnlink, modifier = Modifier.padding(top = 4.dp)) { Text(stringResource(R.string.unlink)) }
+            }
+        }
+        return
+    }
     val state = rememberTransformingLazyColumnState()
     ScreenScaffold(scrollState = state) { padding ->
         TransformingLazyColumn(state = state, contentPadding = padding) {
             item { ListHeader { Text(stringResource(R.string.garage_title)) } }
-            if (vehicles.isEmpty()) item { StatusLine(busy ?: error ?: stringResource(R.string.no_vehicles), working = busy != null) }
             items(vehicles.size) { i ->
                 val v = vehicles[i]
                 val vin = v.optString("vin")
-                Card(onClick = { onSelect(vin) }, modifier = Modifier.fillMaxWidth()) {
-                    images[vin]?.let {
-                        Image(it.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxWidth().height(96.dp), contentScale = ContentScale.Fit)
-                    }
+                Card(onClick = { onSelect(vin) }, modifier = Modifier.fillMaxWidth().enter(i)) {
+                    CarPicture(images[vin], Modifier.fillMaxWidth().height(96.dp))
                     Text(
                         Snapshot.displayName(v),
                         style = MaterialTheme.typography.titleMedium,
@@ -112,107 +140,239 @@ fun GarageScreen(
                     )
                 }
             }
-            if (vehicles.isNotEmpty()) {
-                busy?.let { item { StatusLine(it, working = true) } }
-                error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
-            }
-            item { OutlinedButton(onClick = onUnlink, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.unlink)) } }
+            item { OutlinedButton(onClick = onUnlink, enabled = busy == null, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.unlink)) } }
         }
     }
 }
 
-/** MyToyota's dashboard on the wrist: metrics first, then the remote-control entries. */
+/** One car: a wait face until Toyota answers (old data is never shown), then two dials, status and controls. */
 @Composable
 fun VehicleScreen(
     snapshot: Snapshot?,
     car: Bitmap?,
     busy: String?,
     error: String?,
+    onRetry: () -> Unit,
+    onErrorShown: () -> Unit,
     onWake: () -> Unit,
     onLock: () -> Unit,
+    onUnlock: () -> Unit,
     onClimate: () -> Unit,
     onMap: (Double, Double) -> Unit,
 ) {
-    val state = rememberTransformingLazyColumnState()
-    ScreenScaffold(
-        scrollState = state,
-        edgeButton = {
-            EdgeButton(onClick = onWake, enabled = busy == null && snapshot != null, buttonSize = EdgeButtonSize.Small) {
-                Icon(painterResource(R.drawable.ic_refresh), contentDescription = stringResource(R.string.refresh), modifier = Modifier.size(24.dp))
+    Crossfade(targetState = snapshot != null, animationSpec = tween(450), label = "vehicle") { ready ->
+        val s = snapshot
+        if (!ready || s == null) {
+            WaitFace(car, text = error ?: busy ?: stringResource(R.string.loading), working = error == null) {
+                if (error != null) Button(onClick = onRetry, modifier = Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.retry)) }
             }
-        },
-    ) { padding ->
-        TransformingLazyColumn(state = state, contentPadding = padding) {
-            if (snapshot == null) {
-                item { StatusLine(busy ?: error ?: stringResource(R.string.loading), working = busy != null) }
-                return@TransformingLazyColumn
+        } else {
+            val pager = rememberPagerState(pageCount = { 2 })
+            HorizontalPagerScaffold(pagerState = pager) {
+                HorizontalPager(state = pager) { page ->
+                    AnimatedPage(pageIndex = page, pagerState = pager) {
+                        Dial { if (page == 0) StatusFace(s, busy, onWake) else ControlsFace(s, busy, onLock, onUnlock, onClimate, onMap) }
+                    }
+                }
             }
-            item { ListHeader { Text(snapshot.alias) } }
-            car?.let {
-                item { Image(it.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxWidth().height(72.dp), contentScale = ContentScale.Fit) }
-            }
-            item { LockRow(snapshot) }
-            item { Metrics(snapshot) }
-            item { StatusLine(busy ?: whenText(snapshot.statusAt ?: snapshot.fetchedAt), working = busy != null) }
-            error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
-            item { ListHeader { Text(stringResource(R.string.remote_control)) } }
-            item { BigButton(R.drawable.ic_lock, stringResource(R.string.lock_unlock), lockText(snapshot), onLock) }
-            item { BigButton(R.drawable.ic_fan, stringResource(R.string.climate), snapshot.climate?.let { climateText(it) } ?: stringResource(R.string.no_data), onClimate) }
-            val lat = snapshot.lat
-            val lon = snapshot.lon
-            if (lat != null && lon != null) {
-                item { BigButton(R.drawable.ic_location, stringResource(R.string.last_position), whenText(snapshot.locationAt ?: snapshot.fetchedAt)) { onMap(lat, lon) } }
-            }
+            ErrorNotice(error, onDismiss = onErrorShown)
         }
     }
 }
 
-/** Lock and unlock share one screen; unlocking asks for confirmation. */
+/** On the dials a problem gets the whole screen (a cross and the text, self-dismissing) instead of a cut-off line. */
 @Composable
-fun LockScreen(
-    snapshot: Snapshot?,
+private fun ErrorNotice(error: String?, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf("") } // keeps the text while the notice animates out
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(error) {
+        if (error != null) {
+            text = error
+            haptic.performHapticFeedback(HapticFeedbackType.Reject)
+        }
+    }
+    ConfirmationDialog(
+        visible = error != null,
+        onDismissRequest = onDismiss,
+        text = { Text(text, textAlign = TextAlign.Center, style = MaterialTheme.typography.titleSmall) },
+        colors = ConfirmationDialogDefaults.failureColors(),
+    ) { ConfirmationDialogDefaults.FailureIcon() }
+}
+
+/** Status dial: lock state, fuel (or battery) with its arc, range, mileage and when the car last reported. */
+@Composable
+private fun StatusFace(s: Snapshot, busy: String?, onWake: () -> Unit) {
+    val energy = s.fuelPct ?: s.batteryPct
+    val arc = remember { Animatable(0f) }
+    val reduceMotion = LocalReduceMotion.current
+    LaunchedEffect(energy) {
+        val target = (energy ?: 0) / 100f
+        if (reduceMotion) arc.snapTo(target) else arc.animateTo(target, tween(1100, easing = FastOutSlowInEasing))
+    }
+    Box(Modifier.fillMaxSize()) {
+        if (energy != null) {
+            CircularProgressIndicator(
+                progress = { arc.value },
+                modifier = Modifier.fillMaxSize().padding(3.dp),
+                startAngle = 135f,
+                endAngle = 45f,
+                strokeWidth = 6.dp,
+            )
+        }
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 28.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            LockChip(s, Modifier.enter(0))
+            if (energy != null) {
+                Row(Modifier.padding(top = 8.dp).enter(1), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painterResource(if (s.fuelPct != null) R.drawable.ic_fuel else R.drawable.ic_battery),
+                        contentDescription = stringResource(if (s.fuelPct != null) R.string.fuel else R.string.battery),
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text("${countUp(energy)}%", style = MaterialTheme.typography.displaySmall, maxLines = 1)
+                }
+            }
+            (s.fuelRangeKm ?: s.evRangeKm)?.let { range ->
+                FitText(stringResource(R.string.range_format, number(countUp(range.roundToInt()))), MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.onSurfaceVariant, Modifier.enter(1))
+            }
+            s.odometerKm?.let { odometer ->
+                Row(Modifier.padding(top = 6.dp).enter(2), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(R.drawable.ic_odometer), contentDescription = stringResource(R.string.odometer), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(6.dp))
+                    FitText(km(odometer.roundToInt()), MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.onSurface)
+                }
+            }
+            // When the car last reported; tapping asks the car itself for fresh data.
+            CompactButton(
+                onClick = onWake,
+                enabled = busy == null,
+                colors = ButtonDefaults.filledTonalButtonColors(),
+                icon = {
+                    if (busy != null) CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    else Icon(painterResource(R.drawable.ic_refresh), contentDescription = stringResource(R.string.refresh), modifier = Modifier.size(16.dp))
+                },
+                modifier = Modifier.padding(top = 8.dp).enter(3),
+            ) { FitText(busy ?: whenText(s.statusAt ?: s.fetchedAt), MaterialTheme.typography.labelMedium, MaterialTheme.colorScheme.onSurface) }
+        }
+    }
+}
+
+/** Controls dial: lock, unlock (confirmed), climate and the map as round buttons; the running one shows a ring. */
+@Composable
+private fun ControlsFace(
+    s: Snapshot,
     busy: String?,
-    error: String?,
-    result: Store.CommandResult?,
     onLock: () -> Unit,
     onUnlock: () -> Unit,
+    onClimate: () -> Unit,
+    onMap: (Double, Double) -> Unit,
 ) {
     var confirm by remember { mutableStateOf(false) }
-    val state = rememberTransformingLazyColumnState()
-    ScreenScaffold(scrollState = state) { padding ->
-        TransformingLazyColumn(state = state, contentPadding = padding) {
-            item { ListHeader { Text(snapshot?.alias ?: stringResource(R.string.lock_unlock)) } }
-            snapshot?.let { item { LockRow(it) } }
-            item { StatusLine(busy ?: snapshot?.let { whenText(it.statusAt ?: it.fetchedAt) } ?: "", working = busy != null) }
-            result?.let { item { Centered(it.text, MaterialTheme.typography.bodyMedium, if (it.ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error) } }
-            error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
-            item {
-                Button(
-                    onClick = onLock,
-                    enabled = busy == null,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
-                    icon = { Icon(painterResource(R.drawable.ic_lock), contentDescription = null, modifier = Modifier.size(28.dp)) },
-                    label = { Text(stringResource(R.string.lock), style = MaterialTheme.typography.titleMedium) },
-                )
-            }
-            item {
-                FilledTonalButton(
-                    onClick = { confirm = true },
-                    enabled = busy == null,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
-                    icon = { Icon(painterResource(R.drawable.ic_lock_open), contentDescription = null, modifier = Modifier.size(28.dp)) },
-                    label = { Text(stringResource(R.string.unlock), style = MaterialTheme.typography.titleMedium) },
-                )
-            }
+    var running by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(busy) { if (busy == null) running = null }
+    val lat = s.lat
+    val lon = s.lon
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 22.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Crossfade(targetState = busy, label = "controlsLine") { line ->
+            if (line == null) LockChip(s, compact = true) else FitText(line, MaterialTheme.typography.labelMedium, MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Control(R.drawable.ic_lock, R.string.lock, working = running == 0, enabled = busy == null, modifier = Modifier.enter(0)) { running = 0; onLock() }
+            Control(R.drawable.ic_lock_open, R.string.unlock, working = running == 1, enabled = busy == null, modifier = Modifier.enter(1)) { confirm = true }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Control(R.drawable.ic_fan, R.string.climate, working = false, enabled = true, highlighted = s.climate == "running" || s.climate == "starting", modifier = Modifier.enter(2), onClick = onClimate)
+            if (lat != null && lon != null) Control(R.drawable.ic_location, R.string.map, working = false, enabled = true, modifier = Modifier.enter(3)) { onMap(lat, lon) }
         }
     }
     AlertDialog(
         visible = confirm,
         onDismissRequest = { confirm = false },
-        confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { confirm = false; onUnlock() }) },
+        confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { confirm = false; running = 1; onUnlock() }) },
         title = { Text(stringResource(R.string.confirm_unlock)) },
     )
-    ResultDialogs(result)
+}
+
+@Composable
+private fun Control(icon: Int, label: Int, working: Boolean, enabled: Boolean, modifier: Modifier = Modifier, highlighted: Boolean = false, onClick: () -> Unit) {
+    Column(modifier.width(80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+            FilledIconButton(
+                onClick = onClick,
+                enabled = enabled,
+                modifier = Modifier.size(48.dp),
+                colors = if (highlighted) IconButtonDefaults.filledIconButtonColors() else IconButtonDefaults.filledTonalIconButtonColors(),
+            ) { Icon(painterResource(icon), contentDescription = stringResource(label), modifier = Modifier.size(24.dp)) }
+            if (working) CircularProgressIndicator(modifier = Modifier.fillMaxSize(), strokeWidth = 3.dp)
+        }
+        FitText(stringResource(label), MaterialTheme.typography.labelSmall, MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+/**
+ * Lays [content] out as if the screen were 227 dp wide (the emulator; OnePlus Watch 3 is 233 dp) and scales it to the
+ * real one, so a dial keeps its proportions from 192 dp watches up. The user's font scale is kept.
+ */
+@Composable
+private fun Dial(content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+    val k = (LocalConfiguration.current.screenWidthDp / 227f).coerceIn(0.8f, 1.1f)
+    CompositionLocalProvider(LocalDensity provides Density(density.density * k, density.fontScale), content = content)
+}
+
+/** Lock state as a pill (or a plain line when [compact]): neutral when locked, Toyota red when not; an open door is called out. */
+@Composable
+private fun LockChip(s: Snapshot, modifier: Modifier = Modifier, compact: Boolean = false) {
+    val scheme = MaterialTheme.colorScheme
+    val back by animateColorAsState(if (s.locked == false) scheme.primaryContainer else scheme.surfaceContainer, tween(400), label = "lockBack")
+    val fore by animateColorAsState(
+        when (s.locked) {
+            true -> scheme.onSurface
+            false -> scheme.onPrimaryContainer
+            null -> scheme.onSurfaceVariant
+        },
+        tween(400),
+        label = "lockFore",
+    )
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        val pill = if (compact) Modifier else Modifier.background(back, CircleShape).padding(horizontal = 14.dp, vertical = 6.dp)
+        Row(pill, verticalAlignment = Alignment.CenterVertically) {
+            Crossfade(targetState = s.locked == true, label = "lockIcon") { locked ->
+                Icon(painterResource(if (locked) R.drawable.ic_lock else R.drawable.ic_lock_open), contentDescription = null, modifier = Modifier.size(if (compact) 16.dp else 20.dp), tint = fore)
+            }
+            Spacer(Modifier.width(6.dp))
+            FitText(lockText(s), if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge, fore)
+        }
+        if ((s.openDoors ?: 0) > 0) FitText(stringResource(R.string.door_open), MaterialTheme.typography.labelSmall, scheme.error, Modifier.padding(top = 2.dp))
+    }
+}
+
+/** Full-screen wait: an indeterminate ring along the edge, the car if known, one line of text and optional actions. */
+@Composable
+fun WaitFace(car: Bitmap?, text: String, working: Boolean, actions: @Composable ColumnScope.() -> Unit = {}) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+        if (working) CircularProgressIndicator(modifier = Modifier.fillMaxSize().padding(3.dp), strokeWidth = 6.dp)
+        Column(Modifier.padding(horizontal = 30.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            car?.let { CarPicture(it, Modifier.fillMaxWidth().height(64.dp).enter()) }
+            Text(
+                text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (working) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp).animateContentSize(),
+            )
+            actions()
+        }
+    }
 }
 
 /** Full-screen, self-dismissing confirmation of the last command: a check or a cross with the outcome text. */
@@ -248,77 +408,83 @@ fun ClimateScreen(
     // The crown reports many small scroll events; one temperature step per ROTARY_STEP_PX of travel.
     var travel by remember { mutableStateOf(0f) }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    val fraction = ((temp - Store.TEMP_MIN) / (Store.TEMP_MAX - Store.TEMP_MIN)).toFloat()
-    Box(
-        Modifier
-            .fillMaxSize()
-            .onRotaryScrollEvent { event ->
-                travel += event.verticalScrollPixels
-                val steps = (travel / ROTARY_STEP_PX).toInt()
-                if (steps != 0) {
-                    travel -= steps * ROTARY_STEP_PX
-                    onTemp(temp + steps * Store.TEMP_STEP)
-                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+    val arc = remember { Animatable(0f) }
+    val reduceMotion = LocalReduceMotion.current
+    LaunchedEffect(temp) {
+        val target = ((temp - Store.TEMP_MIN) / (Store.TEMP_MAX - Store.TEMP_MIN)).toFloat()
+        // Sweeps in on opening, then glides one step at a time.
+        if (reduceMotion) arc.snapTo(target) else arc.animateTo(target, tween(if (arc.value == 0f) 700 else 160, easing = FastOutSlowInEasing))
+    }
+    Dial {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .onRotaryScrollEvent { event ->
+                    travel += event.verticalScrollPixels
+                    val steps = (travel / ROTARY_STEP_PX).toInt()
+                    if (steps != 0) {
+                        travel -= steps * ROTARY_STEP_PX
+                        onTemp(temp + steps * Store.TEMP_STEP)
+                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    }
+                    true
                 }
-                true
-            }
-            .focusRequester(focus)
-            .focusable(),
-    ) {
-        CircularProgressIndicator(
-            progress = { fraction },
-            modifier = Modifier.fillMaxSize().padding(4.dp),
-            startAngle = 135f,
-            endAngle = 45f,
-            strokeWidth = 8.dp,
-        )
-        Column(
-            Modifier.fillMaxSize().padding(start = 28.dp, end = 28.dp, top = 36.dp, bottom = 64.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+                .focusRequester(focus)
+                .focusable(),
         ) {
-            Text(stringResource(R.string.climate), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalIconButton(onClick = { onTemp(temp - Store.TEMP_STEP) }, modifier = Modifier.size(48.dp)) { Text("−", style = MaterialTheme.typography.titleLarge) }
-                Text(tempText(temp), style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(horizontal = 10.dp))
-                FilledTonalIconButton(onClick = { onTemp(temp + Store.TEMP_STEP) }, modifier = Modifier.size(48.dp)) { Text("+", style = MaterialTheme.typography.titleLarge) }
+            CircularProgressIndicator(
+                progress = { arc.value },
+                modifier = Modifier.fillMaxSize().padding(3.dp),
+                startAngle = 135f,
+                endAngle = 45f,
+                strokeWidth = 8.dp,
+            )
+            Column(
+                Modifier.fillMaxSize().padding(start = 28.dp, end = 28.dp, top = 36.dp, bottom = 64.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(stringResource(R.string.climate), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalIconButton(onClick = { onTemp(temp - Store.TEMP_STEP) }, modifier = Modifier.size(48.dp)) { Text("−", style = MaterialTheme.typography.titleLarge) }
+                    Text(tempText(temp), style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(horizontal = 10.dp))
+                    FilledTonalIconButton(onClick = { onTemp(temp + Store.TEMP_STEP) }, modifier = Modifier.size(48.dp)) { Text("+", style = MaterialTheme.typography.titleLarge) }
+                }
+                val line = busy ?: result?.text ?: error ?: snapshot?.climate?.let { climateText(it) } ?: stringResource(R.string.climate_off)
+                val lineColor = when {
+                    busy != null -> MaterialTheme.colorScheme.onSurfaceVariant
+                    error != null || result?.ok == false -> MaterialTheme.colorScheme.error
+                    running || result?.ok == true -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Text(line, style = MaterialTheme.typography.bodySmall, color = lineColor, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp).animateContentSize())
             }
-            val line = busy ?: result?.text ?: error ?: stringResource(if (running) R.string.climate_on else R.string.climate_off)
-            val lineColor = when {
-                busy != null -> MaterialTheme.colorScheme.onSurfaceVariant
-                error != null || result?.ok == false -> MaterialTheme.colorScheme.error
-                running || result?.ok == true -> MaterialTheme.colorScheme.primary
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
-            }
-            Text(line, style = MaterialTheme.typography.bodySmall, color = lineColor, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp).animateContentSize())
-        }
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-            EdgeButton(onClick = { onToggle(!running) }, enabled = busy == null, buttonSize = EdgeButtonSize.Small) {
-                Text(stringResource(if (running) R.string.turn_off else R.string.turn_on))
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                EdgeButton(onClick = { onToggle(!running) }, enabled = busy == null, buttonSize = EdgeButtonSize.Small) {
+                    Text(stringResource(if (running) R.string.turn_off else R.string.turn_on))
+                }
             }
         }
     }
-    ResultDialogs(result)
 }
 
 private const val ROTARY_STEP_PX = 48f
 
 @Composable
-fun LinkScreen(busy: String?, error: String?, onLoginHere: () -> Unit) {
+fun LinkScreen(error: String?, onLoginHere: () -> Unit) {
     val state = rememberTransformingLazyColumnState()
     ScreenScaffold(scrollState = state) { padding ->
         TransformingLazyColumn(state = state, contentPadding = padding) {
-            item { Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxWidth().height(72.dp)) }
-            item { Centered(stringResource(R.string.link_hint), MaterialTheme.typography.bodyMedium) }
+            item { Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.fillMaxWidth().height(72.dp).enter(0)) }
+            item { Centered(stringResource(R.string.link_hint), MaterialTheme.typography.bodyMedium, modifier = Modifier.enter(1)) }
             item {
                 Button(
                     onClick = onLoginHere,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).enter(2),
                     icon = { Icon(painterResource(R.drawable.ic_login), contentDescription = null) },
                     label = { Text(stringResource(R.string.login_here)) },
                 )
             }
-            busy?.let { item { StatusLine(it, working = true) } }
             error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
         }
     }
@@ -355,72 +521,47 @@ fun LoginScreen(busy: String?, error: String?, onSubmit: (email: String, passwor
 // ---- pieces ----
 
 @Composable
-private fun BigButton(icon: Int, label: String, secondary: String, onClick: () -> Unit) {
-    FilledTonalButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
-        icon = { Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(28.dp)) },
-        secondaryLabel = { Text(secondary) },
-        label = { Text(label, style = MaterialTheme.typography.titleMedium) },
-    )
-}
-
-/** Range as the hero figure, then the rest in a row: what matters on a wrist. */
-@Composable
-private fun Metrics(s: Snapshot) {
-    val range = s.fuelRangeKm ?: s.evRangeKm
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        range?.let {
-            Text(km(it), style = MaterialTheme.typography.displaySmall)
-            Text(stringResource(R.string.range), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(8.dp))
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 28.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            s.fuelPct?.let { Figure("$it%", stringResource(R.string.fuel)) }
-            s.batteryPct?.let { Figure("$it%", stringResource(R.string.battery)) }
-            s.odometerKm?.let { Figure(km(it), stringResource(R.string.odometer)) }
-        }
+private fun CarPicture(picture: Bitmap?, modifier: Modifier) {
+    if (picture != null) {
+        Image(picture.asImageBitmap(), contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit)
+    } else {
+        Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = modifier)
     }
 }
 
+/** One line that shrinks (down to 9 sp) instead of wrapping or being cut: label lengths vary a lot between languages. */
 @Composable
-private fun Figure(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleMedium)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun FitText(text: String, style: TextStyle, color: Color, modifier: Modifier = Modifier) = BasicText(
+    text,
+    modifier,
+    style = style.copy(color = color, textAlign = TextAlign.Center),
+    maxLines = 1,
+    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = style.fontSize),
+)
+
+/** Fades and lifts content in once; [order] staggers siblings by 70 ms. Runs in the graphics layer, so nothing recomposes. */
+@Composable
+private fun Modifier.enter(order: Int = 0): Modifier {
+    val progress = remember { Animatable(0f) }
+    val reduceMotion = LocalReduceMotion.current
+    LaunchedEffect(Unit) {
+        if (reduceMotion) progress.snapTo(1f) else progress.animateTo(1f, tween(420, delayMillis = order * 70, easing = FastOutSlowInEasing))
+    }
+    return graphicsLayer {
+        alpha = progress.value
+        translationY = (1f - progress.value) * 12.dp.toPx()
     }
 }
 
-/** Date line, or the current step with a small spinner that only exists while a request is running. */
+/** Counts up to [target] when it first appears and glides to later values; idle numbers never animate. */
 @Composable
-fun StatusLine(text: String, working: Boolean) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp).animateContentSize(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (working) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-            Spacer(Modifier.width(8.dp))
-        }
-        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+private fun countUp(target: Int): Int {
+    val value = remember { Animatable(0f) }
+    val reduceMotion = LocalReduceMotion.current
+    LaunchedEffect(target) {
+        if (reduceMotion) value.snapTo(target.toFloat()) else value.animateTo(target.toFloat(), tween(900, easing = FastOutSlowInEasing))
     }
-}
-
-@Composable
-private fun LockRow(s: Snapshot) {
-    val icon = if (s.locked == true) R.drawable.ic_lock else R.drawable.ic_lock_open
-    val target = when (s.locked) {
-        true -> MaterialTheme.colorScheme.onSurface
-        false -> MaterialTheme.colorScheme.primary
-        null -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val color by animateColorAsState(target, tween(400), label = "lockColor")
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-        Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(26.dp), tint = color)
-        Spacer(Modifier.width(8.dp))
-        Text(lockText(s), style = MaterialTheme.typography.titleMedium, color = color)
-    }
+    return value.value.roundToInt()
 }
 
 @Composable
@@ -458,12 +599,12 @@ private fun Field(state: TextFieldState, hint: String, type: KeyboardType, secur
 }
 
 @Composable
-fun Centered(text: String, style: TextStyle = LocalTextStyle.current, color: Color = Color.Unspecified) =
-    Text(text, modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp), textAlign = TextAlign.Center, style = style, color = color)
+fun Centered(text: String, style: TextStyle = LocalTextStyle.current, color: Color = Color.Unspecified, modifier: Modifier = Modifier) =
+    Text(text, modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp), textAlign = TextAlign.Center, style = style, color = color)
 
 @Composable
 private fun lockText(s: Snapshot): String = when (s.locked) {
-    true -> stringResource(if ((s.openDoors ?: 0) > 0) R.string.locked_door_open else R.string.locked)
+    true -> stringResource(R.string.locked)
     false -> stringResource(R.string.unlocked)
     null -> stringResource(R.string.lock_unknown)
 }
@@ -479,8 +620,10 @@ private fun climateText(status: String): String = when (status) {
 
 private fun tempText(t: Double) = if (t % 1.0 == 0.0) "${t.toInt()}°" else String.format(Locale.getDefault(), "%.1f°", t)
 
+private fun number(value: Int): String = NumberFormat.getIntegerInstance().format(value)
+
 @Composable
-private fun km(value: Double): String = stringResource(R.string.km_format, NumberFormat.getIntegerInstance().format(value.roundToLong()))
+private fun km(value: Int): String = stringResource(R.string.km_format, number(value))
 
 /** "Today, 21:07" / "Yesterday, 18:30" / "30 Sep, 10:12", in the device language. */
 @Composable

@@ -11,8 +11,8 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 ## Qué hace
 
 - **Mi Garaje**: una tarjeta por coche de la cuenta, con la imagen oficial de Toyota.
-- **Vehículo**: cerrado o abierto, autonomía, combustible o batería, kilometraje, fecha de los datos y última posición aparcado (abre la app de mapas del reloj).
-- **Cerrar / Abrir**: una sola pantalla con ambas acciones. Abrir pide confirmación en pantalla. Tras cada orden la app despierta al coche y verifica su estado real antes de decirte "Vehículo cerrado".
+- **Esfera de estado**: cerrado o abierto, combustible o batería con un indicador alrededor de la pantalla, autonomía, kilometraje y cuándo informó el coche por última vez (tócalo para despertar al coche y pedir datos nuevos). Al abrir un coche se muestra un anillo de carga hasta que Toyota responde, así nunca ves datos viejos.
+- **Esfera de controles** (desliza a la izquierda): cerrar, abrir, climatizador y última posición aparcado (abre la app de mapas del reloj). Abrir pide confirmación en pantalla. Tras cada orden la app despierta al coche y verifica su estado real antes de decirte "Vehículo cerrado".
 - **Climatizador**: una esfera que giras con la corona o con los botones +/− (18–29 °C); encender o apagar durante 10 minutos.
 - **Autónoma**: el reloj habla con Toyota por sí mismo por Wi-Fi o LTE, o a través del Bluetooth del móvil emparejado. La app de móvil es opcional.
 - **Mantiene la sesión**: el refresh token de Toyota mantiene la sesión. Si quieres, guarda la contraseña al iniciar sesión (desactivado por defecto, cifrada con su propia clave) y el reloj volverá a entrar solo si Toyota cierra la sesión.

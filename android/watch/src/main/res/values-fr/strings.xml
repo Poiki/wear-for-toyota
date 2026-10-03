@@ -3,7 +3,6 @@
     <string name="app_name">Wear pour Toyota</string>
 
     <string name="garage_title">Mon Garage</string>
-    <string name="no_vehicles">Aucun véhicule</string>
     <string name="unlink">Dissocier</string>
 
     <string name="link_hint">Associez la montre depuis l\'app du téléphone ou connectez-vous ici</string>
@@ -18,24 +17,21 @@
     <string name="login_note_saved">Chiffré avec une clé qui ne quitte jamais le coffre sécurisé de la montre ; utilisé seulement si la session expire.</string>
 
     <string name="locked">Verrouillée</string>
-    <string name="locked_door_open">Verrouillée · porte ouverte</string>
     <string name="unlocked">Déverrouillée</string>
     <string name="lock_unknown">État inconnu</string>
-    <string name="range">Autonomie</string>
+    <string name="door_open">Porte ouverte</string>
     <string name="fuel">Carburant</string>
     <string name="battery">Batterie</string>
     <string name="odometer">Kilométrage</string>
     <string name="km_format">%1$s km</string>
+    <string name="range_format">%1$s km d\'autonomie</string>
 
-    <string name="remote_control">Commandes à distance</string>
-    <string name="lock_unlock">Verrouiller / Déverrouiller</string>
     <string name="climate">Climatisation</string>
-    <string name="last_position">Dernière position</string>
+    <string name="map">Carte</string>
     <string name="refresh">Actualiser</string>
     <string name="lock">Verrouiller</string>
     <string name="unlock">Déverrouiller</string>
     <string name="confirm_unlock">Déverrouiller la voiture ?</string>
-    <string name="no_data">Aucune donnée</string>
     <string name="climate_on">Allumée</string>
     <string name="climate_off">Éteinte</string>
     <string name="climate_starting">Démarrage</string>
@@ -44,6 +40,7 @@
     <string name="turn_off">Éteindre</string>
 
     <string name="loading">Chargement…</string>
+    <string name="retry">Réessayer</string>
     <string name="today">Aujourd\'hui</string>
     <string name="yesterday">Hier</string>
     <string name="when_format">%1$s, %2$s</string>
@@ -74,7 +71,7 @@
     <string name="err_offline">Pas de connexion.</string>
     <string name="err_unknown">Échec : %1$s</string>
     <string name="err_wake_rejected">La voiture a refusé la demande</string>
-    <string name="err_no_response">La voiture ne répond pas ; dernières données affichées</string>
+    <string name="err_no_response">La voiture n\'a pas répondu</string>
     <string name="err_no_maps">Aucune app de cartes sur la montre</string>
     <string name="err_watch_locked">Déverrouillez d\'abord la montre</string>
     <string name="err_save_password">Connecté, mais cette montre ne peut pas garder le mot de passe en sécurité ; il n\'a pas été enregistré.</string>

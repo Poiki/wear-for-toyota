@@ -37,6 +37,9 @@ internal class Vault(context: Context, private val alias: String = "toyota-vault
         generateKey()
     }
 
+    /** Whether [name] is stored, without touching the Keystore. */
+    fun has(name: String) = prefs.contains(name)
+
     fun read(name: String): String? = prefs.getString(name, null)?.let { stored ->
         runCatching {
             val bytes = Base64.decode(stored, Base64.NO_WRAP)

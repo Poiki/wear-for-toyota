@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1 — 2026-10-03
+
+- The car screen is now two dials. The status dial shows the lock state, fuel or battery with a gauge around the edge, range, mileage and the time of the last report; tap that time to wake the car. Swipe left for the controls dial: lock, unlock (confirmed), climate and the map.
+- Opening a car shows a loading ring until Toyota answers. Old data is never shown. The last car is read in the background while the garage is showing, so it usually opens at once.
+- The garage appears only when the car pictures are ready.
+- Every text fits on one line in all six languages: icons instead of labels, and long words shrink to fit. Errors on the dials appear full screen.
+- Small and large round screens keep the same layout, and animations respect the system's reduce-motion setting.
+- Faster start: the tokens are decrypted at the first request instead of at launch, and the unused emoji support no longer starts.
+
 ## 0.2.0 — 2026-10-03
 
 - "Save password" switch on the watch and phone sign-in, off by default. The password is encrypted with its own AES-256 Android Keystore key (StrongBox when available, usable only while the watch is unlocked when it has a screen lock). The watch reads it only to sign in again by itself when Toyota ends the session, and deletes it if Toyota rejects it.
