@@ -8,6 +8,18 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 
 > **Not affiliated with, endorsed by or supported by Toyota.** The app talks to the same backend as the official MyToyota app, as documented by the community (see Credits). Toyota can change that backend at any time and break the app. Use it at your own risk and only with your own car and account.
 
+## Screenshots
+
+Wear OS emulator screenshots with demonstration data. Scroll the trip list and details to see more information.
+
+| Vehicle status | Controls | Climate |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/0.3.1/en/status.png" width="180" alt="Vehicle status"> | <img src="docs/screenshots/0.3.1/en/controls.png" width="180" alt="Remote controls"> | <img src="docs/screenshots/0.3.1/en/climate.png" width="180" alt="Climate control"> |
+
+| Average consumption | Recent trips | Trip detail |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/0.3.1/en/consumption.png" width="180" alt="Average fuel consumption"> | <img src="docs/screenshots/0.3.1/en/trips.png" width="180" alt="Recent trips"> | <img src="docs/screenshots/0.3.1/en/trip-detail.png" width="180" alt="Trip detail"> |
+
 ## What it does
 
 - **My Garage**: one card per car on the account, with Toyota's own picture of the car.

@@ -8,6 +8,18 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 
 > **No está afiliada a Toyota ni cuenta con su apoyo.** La app habla con el mismo backend que la app oficial MyToyota, tal y como lo ha documentado la comunidad (ver Créditos). Toyota puede cambiar ese backend en cualquier momento y dejar la app inservible. Úsala bajo tu responsabilidad y solo con tu propio coche y tu propia cuenta.
 
+## Capturas
+
+Capturas del emulador Wear OS con datos de demostración. Desplaza la lista de viajes y los detalles para ver más información.
+
+| Estado del coche | Controles | Climatizador |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/0.3.1/es/status.png" width="180" alt="Estado del coche"> | <img src="docs/screenshots/0.3.1/es/controls.png" width="180" alt="Controles remotos"> | <img src="docs/screenshots/0.3.1/es/climate.png" width="180" alt="Climatizador"> |
+
+| Consumo medio | Viajes recientes | Detalle del viaje |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/0.3.1/es/consumption.png" width="180" alt="Consumo medio de combustible"> | <img src="docs/screenshots/0.3.1/es/trips.png" width="180" alt="Viajes recientes"> | <img src="docs/screenshots/0.3.1/es/trip-detail.png" width="180" alt="Detalle del viaje"> |
+
 ## Qué hace
 
 - **Mi Garaje**: una tarjeta por coche de la cuenta, con la imagen oficial de Toyota.
