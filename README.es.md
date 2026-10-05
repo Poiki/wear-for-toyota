@@ -29,7 +29,7 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 
 Descarga los instaladores de consola desde este repositorio:
 
-- **Windows:** guarda [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd) e [install.ps1](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.ps1) en la misma carpeta y abre `install.cmd` con doble clic.
+- **Windows:** guarda [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd) y ábrelo con doble clic. Descarga automáticamente el instalador PowerShell.
 - **Mac:** guarda [install.command](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.command), ejecuta una vez `chmod +x ~/Downloads/install.command` y ábrelo en Terminal o con doble clic.
 
 Descargan ADB de Google y el APK firmado más reciente, verifican SHA-256 e instalan conservando los datos. No necesitas Android Studio, Java ni permisos de administrador. Activa la depuración y autoriza el ordenador en el reloj; para Wi-Fi el script guía el emparejamiento y la conexión. En USB, Windows puede necesitar el controlador del fabricante. [Instrucciones detalladas](docs/INSTALL.md). Los scripts permanecen en el repositorio y cada release incluye un README de instalación.
@@ -93,6 +93,8 @@ Descargan ADB de Google y el APK firmado más reciente, verifican SHA-256 e inst
 - No está en Google Play: Play prohíbe introducir contraseñas en el reloj y una API no oficial no pasaría la revisión. Solo instalación manual.
 
 ## Desarrollo
+
+En la rama de desarrollo 0.3.1: desliza hacia arriba o toca la foto del coche para ver viajes recientes, media ponderada y detalle. Una página de hasta 50 viajes de los últimos 30 días, con cobertura explícita; la comparación de meses completos y el gráfico de consumo instantáneo aún no están implementados.
 
 - [Guía de estilo](design.md) e [investigación de consumos para 0.3.1](docs/consumption.md). El historial está en desarrollo y no forma parte de la release de diseño 0.3.0.
 

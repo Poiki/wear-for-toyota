@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 — in development
+
+- Swipe up or tap the car photo to open recent trips; existing horizontal controls navigation remains available.
+- On-demand Toyota trip read (last 30 days, first page up to 50 trips), without waking the car or downloading GPS routes.
+- Weighted fuel average, sample coverage, trip list and detail: distance, duration, fuel, average speed, optional electric-distance share and Toyota score. Missing values stay unknown; zero fuel remains valid.
+- Separate loading/error state for history. Monthly comparisons and per-kilometre consumption charts await sufficient data.
+
 ## 0.3.0 — 2026-10-05
 
 - Black and red cockpit interface, compact fuel/battery dial beside the full car photo, metallic buttons and a matching climate dial.

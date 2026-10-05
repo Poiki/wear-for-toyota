@@ -8,8 +8,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +58,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -170,8 +173,10 @@ fun VehicleScreen(
     onUnlock: () -> Unit,
     onClimate: () -> Unit,
     onMap: (Double, Double) -> Unit,
+    onTrips: () -> Unit,
 ) {
     var confirm by remember { mutableStateOf(false) }
+    val tripSwipeDistance = with(LocalDensity.current) { 45.dp.toPx() }
     Crossfade(targetState = snapshot != null, animationSpec = tween(450), label = "vehicle") { ready ->
         val s = snapshot
         if (!ready || s == null) {
@@ -180,10 +185,17 @@ fun VehicleScreen(
             }
         } else {
             val pager = rememberPagerState(pageCount = { 2 })
-            HorizontalPager(state = pager) { page ->
+            HorizontalPager(state = pager, modifier = Modifier.pointerInput(onTrips, tripSwipeDistance) {
+                var drag = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { drag = 0f },
+                    onDragEnd = { if (drag < -tripSwipeDistance) onTrips() },
+                    onVerticalDrag = { change, amount -> change.consume(); drag += amount },
+                )
+            }) { page ->
                 AnimatedPage(pageIndex = page, pagerState = pager) {
                     Dial {
-                        if (page == 0) StatusFace(s, car, busy, onWake, onLock, { confirm = true }, onClimate, onMap)
+                        if (page == 0) StatusFace(s, car, busy, onWake, onLock, { confirm = true }, onClimate, onMap, onTrips)
                         else ControlsFace(s, busy, onLock, { confirm = true }, onClimate, onMap)
                     }
                 }
@@ -246,8 +258,10 @@ private fun ErrorNotice(error: String?, onDismiss: () -> Unit) {
 private fun StatusFace(
     s: Snapshot, car: Bitmap?, busy: String?, onWake: () -> Unit,
     onLock: () -> Unit, onUnlock: () -> Unit, onClimate: () -> Unit, onMap: (Double, Double) -> Unit,
+    onTrips: () -> Unit,
 ) {
     val energy = s.fuelPct ?: s.batteryPct
+    val tripsLabel = stringResource(R.string.trips_title)
     val arc = remember { Animatable(0f) }
     val reduceMotion = LocalReduceMotion.current
     LaunchedEffect(energy) {
@@ -256,7 +270,8 @@ private fun StatusFace(
     }
     Box(Modifier.fillMaxSize().cockpit()) {
         Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.TopCenter) { BrandHeader(page = 0) }
-        CarPicture(car, Modifier.size(133.dp, 58.dp).align(Alignment.TopCenter).offset(x = (-23).dp, y = 49.dp).enter())
+        CarPicture(car, Modifier.size(133.dp, 58.dp).align(Alignment.TopCenter).offset(x = (-23).dp, y = 49.dp)
+            .clickable(onClick = onTrips).semantics { contentDescription = tripsLabel }.enter())
         if (energy != null) {
             NeonGauge({ arc.value }, Modifier.size(49.dp).align(Alignment.TopEnd).offset(x = (-18).dp, y = 56.dp)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -298,6 +313,8 @@ private fun StatusFace(
             val lon = s.lon
             if (lat != null && lon != null) NeonAction(R.drawable.ic_location, R.string.map) { onMap(lat, lon) }
         }
+        Text(stringResource(R.string.trips_swipe), modifier = Modifier.align(Alignment.TopCenter).offset(y = 207.dp),
+            fontSize = 8.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
 

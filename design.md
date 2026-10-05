@@ -33,7 +33,7 @@ Las acciones deshabilitadas se distinguen por el icono y su estado accesible. Ab
 
 ## Consumos y viajes — siguiente versión
 
-Desde el panel del coche, deslizar arriba abre el historial; volver usa el gesto o botón de atrás del sistema. Mantener el deslizamiento horizontal hacia controles. Añadir también un acceso visible a viajes para descubrir la función y usarla con accesibilidad.
+Desde el panel del coche, deslizar arriba abre el historial; volver usa el gesto o botón de atrás del sistema. Mantener el deslizamiento horizontal hacia controles. La pista «↑ Viajes» hace visible la función; tocar la foto del coche ofrece también un acceso con etiqueta accesible «Viajes».
 
 El historial empieza por una tarjeta de resumen y continúa con viajes recientes. Cada fila muestra fecha, distancia y consumo; tocarla abre duración, combustible, velocidad media y datos híbridos cuando existan. Las tarjetas conservan el metal oscuro, borde fino y selección roja de la referencia.
 

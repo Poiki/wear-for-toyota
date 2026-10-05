@@ -120,7 +120,7 @@ private fun ToyotaTheme(content: @Composable () -> Unit) = MaterialTheme(
     content = content,
 )
 
-private enum class Route { Garage, Vehicle, Climate }
+private enum class Route { Garage, Vehicle, Climate, Trips }
 
 @Composable
 private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, preview: String? = null) {
@@ -138,8 +138,9 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
     var offer by remember { mutableStateOf<Releases.Apk?>(null) } // outlives Store.update so the dialog can animate out
     val stack = remember {
         mutableStateListOf(Route.Garage).apply {
-            if (preview == "vehicle" || preview == "climate") add(Route.Vehicle)
+            if (preview == "vehicle" || preview == "climate" || preview == "trips") add(Route.Vehicle)
             if (preview == "climate") add(Route.Climate)
+            if (preview == "trips") add(Route.Trips)
         }
     }
 
@@ -268,6 +269,7 @@ private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double
                     scope.launch { Store.loadClimateSettings() }
                 },
                 onMap = onMap,
+                onTrips = { stack.add(Route.Trips) },
             )
         }
         Route.Climate -> ClimateScreen(
@@ -279,5 +281,12 @@ private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double
             onTemp = Store::setClimateTemp,
             onToggle = { start -> scope.launch { Store.climate(start) } },
         )
+        Route.Trips -> {
+            val history by Store.tripHistory.collectAsState()
+            val loading by Store.tripsLoading.collectAsState()
+            val tripError by Store.tripsError.collectAsState()
+            LaunchedEffect(selectedVin) { Store.loadTrips() }
+            TripsScreen(history, loading, tripError) { scope.launch { Store.loadTrips() } }
+        }
     }
 }

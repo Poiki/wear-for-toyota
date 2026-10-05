@@ -29,7 +29,7 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 
 Download the console installers from this repository:
 
-- **Windows:** save [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd) and [install.ps1](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.ps1) in the same folder, then double-click `install.cmd`.
+- **Windows:** save [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd), then double-click it. It downloads its PowerShell installer automatically.
 - **Mac:** save [install.command](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.command), run `chmod +x ~/Downloads/install.command` once, then open it in Terminal or double-click it.
 
 They download Google's ADB tools and the latest signed watch APK, verify SHA-256 and install without deleting app data. No Android Studio, Java or administrator access is required. You must enable debugging and authorize the computer on the watch; for Wi-Fi the script guides pairing and connection. Windows USB may require the manufacturer's driver. [Step-by-step installation](docs/INSTALL.md). The scripts stay in the repository; every release includes installation instructions.
@@ -93,6 +93,8 @@ They download Google's ADB tools and the latest signed watch APK, verify SHA-256
 - Not on Google Play: Play forbids password input on the watch, and an unofficial API would not pass review. Sideload only.
 
 ## Development
+
+On the 0.3.1 development branch: swipe up or tap the car photo for recent trips, a weighted fuel average and trip details. One page (up to 50 trips from the last 30 days), with explicit coverage; full-month comparison and instantaneous consumption graphs are not implemented.
 
 - [Visual style](design.md) and [trip consumption research for 0.3.1](docs/consumption.md). The history feature is in development and is not included in the 0.3.0 design release.
 

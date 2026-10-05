@@ -87,4 +87,20 @@
     <string name="temperature_down">Riduci temperatura</string>
     <string name="temperature_up">Aumenta temperatura</string>
     <string name="cancel">Annulla</string>
+    <string name="trips_title">Viaggi</string>
+    <string name="trips_swipe">↑ Viaggi</string>
+    <string name="trips_period">Ultimi 30 giorni</string>
+    <string name="trips_average">Media di questi viaggi</string>
+    <string name="trips_measured">%1$d viaggi con consumo</string>
+    <string name="trips_coverage">%1$d di %2$d viaggi</string>
+    <string name="trips_empty">Nessun viaggio disponibile nel periodo.</string>
+    <string name="trip_detail">Dettaglio viaggio</string>
+    <string name="trips_consumption">Consumo</string>
+    <string name="trips_distance">Distanza</string>
+    <string name="trips_duration">Durata</string>
+    <string name="trips_speed">Velocità media</string>
+    <string name="trips_ev_share">Distanza elettrica</string>
+    <string name="trips_score">Punteggio Toyota</string>
+    <string name="trips_back">Indietro</string>
+    <string name="trips_coverage_unknown">%1$d viaggi mostrati</string>
 </resources>
