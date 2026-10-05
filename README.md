@@ -29,7 +29,7 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 
 Download the console installers from this repository:
 
-- **Windows:** save [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd) and [install.ps1](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.ps1) in the same folder, then double-click `install.cmd`.
+- **Windows:** save [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd), then double-click it. It downloads its PowerShell installer automatically.
 - **Mac:** save [install.command](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.command), run `chmod +x ~/Downloads/install.command` once, then open it in Terminal or double-click it.
 
 They download Google's ADB tools and the latest signed watch APK, verify SHA-256 and install without deleting app data. No Android Studio, Java or administrator access is required. You must enable debugging and authorize the computer on the watch; for Wi-Fi the script guides pairing and connection. Windows USB may require the manufacturer's driver. [Step-by-step installation](docs/INSTALL.md). The scripts stay in the repository; every release includes installation instructions.

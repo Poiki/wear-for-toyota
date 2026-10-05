@@ -29,7 +29,7 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 
 Descarga los instaladores de consola desde este repositorio:
 
-- **Windows:** guarda [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd) e [install.ps1](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.ps1) en la misma carpeta y abre `install.cmd` con doble clic.
+- **Windows:** guarda [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd) y ábrelo con doble clic. Descarga automáticamente el instalador PowerShell.
 - **Mac:** guarda [install.command](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.command), ejecuta una vez `chmod +x ~/Downloads/install.command` y ábrelo en Terminal o con doble clic.
 
 Descargan ADB de Google y el APK firmado más reciente, verifican SHA-256 e instalan conservando los datos. No necesitas Android Studio, Java ni permisos de administrador. Activa la depuración y autoriza el ordenador en el reloj; para Wi-Fi el script guía el emparejamiento y la conexión. En USB, Windows puede necesitar el controlador del fabricante. [Instrucciones detalladas](docs/INSTALL.md). Los scripts permanecen en el repositorio y cada release incluye un README de instalación.
