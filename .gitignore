@@ -25,8 +25,31 @@ __pycache__/
 .venv/
 *.pyc
 
-# estado local de herramientas
+# estado local de editores y agentes de IA
+.vscode/
+.codex/
+.claude/
+.agents/
+.cursor/
 .omc/
+.github/agents/
+.github/copilot-instructions.md
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# capturas y experimentos locales sin uso en la app o los README
+/docs/assets/
+/docs/zepp-os.md
+
+# ficheros temporales
+*.log
+*.tmp
+*.temp
+*.bak
+*~
+.DS_Store
+Thumbs.db
 
 # firma de release (local)
 android/keystore.properties
