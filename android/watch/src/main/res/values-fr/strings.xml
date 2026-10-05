@@ -87,4 +87,20 @@
     <string name="temperature_down">Baisser la température</string>
     <string name="temperature_up">Augmenter la température</string>
     <string name="cancel">Annuler</string>
+    <string name="trips_title">Trajets</string>
+    <string name="trips_swipe">↑ Trajets</string>
+    <string name="trips_period">30 derniers jours</string>
+    <string name="trips_average">Moyenne de ces trajets</string>
+    <string name="trips_measured">%1$d trajets renseignés</string>
+    <string name="trips_coverage">%1$d sur %2$d trajets</string>
+    <string name="trips_empty">Aucun trajet disponible sur cette période.</string>
+    <string name="trip_detail">Détail du trajet</string>
+    <string name="trips_consumption">Consommation</string>
+    <string name="trips_distance">Distance</string>
+    <string name="trips_duration">Durée</string>
+    <string name="trips_speed">Vitesse moyenne</string>
+    <string name="trips_ev_share">Distance électrique</string>
+    <string name="trips_score">Score Toyota</string>
+    <string name="trips_back">Retour</string>
+    <string name="trips_coverage_unknown">%1$d trajets affichés</string>
 </resources>

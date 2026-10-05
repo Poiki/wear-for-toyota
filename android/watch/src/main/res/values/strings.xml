@@ -87,4 +87,20 @@
     <string name="temperature_down">Decrease temperature</string>
     <string name="temperature_up">Increase temperature</string>
     <string name="cancel">Cancel</string>
+    <string name="trips_title">Trips</string>
+    <string name="trips_swipe">↑ Trips</string>
+    <string name="trips_period">Last 30 days</string>
+    <string name="trips_average">Average of these trips</string>
+    <string name="trips_measured">%1$d trips with fuel data</string>
+    <string name="trips_coverage">%1$d of %2$d trips</string>
+    <string name="trips_empty">No trips available in this period.</string>
+    <string name="trip_detail">Trip detail</string>
+    <string name="trips_consumption">Consumption</string>
+    <string name="trips_distance">Distance</string>
+    <string name="trips_duration">Duration</string>
+    <string name="trips_speed">Average speed</string>
+    <string name="trips_ev_share">Electric distance</string>
+    <string name="trips_score">Toyota score</string>
+    <string name="trips_back">Back</string>
+    <string name="trips_coverage_unknown">%1$d trips shown</string>
 </resources>

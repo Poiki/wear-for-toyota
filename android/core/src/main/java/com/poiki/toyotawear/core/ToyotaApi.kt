@@ -18,6 +18,12 @@ class ToyotaApi(private val tokens: () -> Tokens) {
     fun electric(vin: String): JSONObject = payload("GET", ToyotaConst.ELECTRIC, vin)
     fun location(vin: String): JSONObject = payload("GET", ToyotaConst.LOCATION, vin)
     fun climateStatus(vin: String): JSONObject = payload("GET", ToyotaConst.CLIMATE_STATUS, vin)
+    /** One recent page, without GPS routes or a wake/remote command. */
+    fun trips(vin: String): TripHistory {
+        // ponytail: first 50 trips only; follow nextOffset when full-period comparisons are added.
+        val today = java.time.LocalDate.now()
+        return TripHistory.from(payload("GET", "/v1/trips?from=${today.minusDays(29)}&to=$today&route=false&summary=true&limit=50&offset=0", vin))
+    }
 
     /** Saved climate settings (temperature, duration, options); Toyota answers an empty body when remote services are inactive. */
     fun climateSettings(vin: String): JSONObject? = call("GET", ToyotaConst.CLIMATE_SETTINGS, vin).optJSONObject("payload")

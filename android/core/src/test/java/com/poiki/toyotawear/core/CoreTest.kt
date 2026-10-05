@@ -60,6 +60,31 @@ class CoreTest {
     }
 
     @Test
+    fun tripConsumptionUsesWeightedDistanceAndPreservesMissingData() {
+        val payload = JSONObject("""{"trips":[
+            {"id":"short","summary":{"startTs":"2026-10-04T10:00:00Z","length":10000,"duration":600,"fuelConsumption":1000},"hdc":{"evDistance":2000}},
+            {"id":"long","summary":{"startTs":"2026-10-05T10:00:00Z","length":90000,"duration":3600,"fuelConsumption":4500}},
+            {"id":"electric","summary":{"length":10000,"fuelConsumption":0}},
+            {"id":"missing","summary":{"length":5000}},
+            {"id":"idle","summary":{"length":0,"fuelConsumption":10}},
+            {"summary":null}
+        ],"_metadata":{"pagination":{"totalCount":70}}}""")
+        val h = TripHistory.from(payload)
+        assertEquals(70, h.total)
+        assertEquals(5, h.trips.size)
+        assertEquals(3, h.measured.size)
+        assertEquals(5.0, h.averageConsumption!!, 0.001) // 5.5 L / 110 km, not average of rates.
+        assertEquals(115.0, h.distanceKm!!, 0.001)
+        assertEquals("long", h.trips.first().id)
+        assertEquals(60.0, h.trips.first { it.id == "short" }.averageSpeed!!, 0.001)
+        assertEquals(20.0, h.trips.first { it.id == "short" }.evShare!!, 0.001)
+        assertEquals(0.0, h.trips.first { it.id == "electric" }.consumption!!, 0.0)
+        assertNull(h.trips.first { it.id == "missing" }.consumption)
+        assertNull(h.trips.first { it.id == "idle" }.consumption)
+        assertNull(TripHistory.from(JSONObject()).averageConsumption)
+    }
+
+    @Test
     fun snapshotWithOnlyVehicle() {
         val s = Snapshot.from(JSONObject().put("vehicle", JSONObject().put("vin", "X").put("modelName", "Yaris")))
         assertEquals("Yaris", s.alias)

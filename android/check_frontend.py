@@ -78,6 +78,43 @@ def texts(tree):
     return [n.get('text') for n in tree.iter('node')]
 
 
+def check_trips():
+    labels = [('en','Trips','Trip detail'), ('es','Viajes','Detalle del viaje'),
+              ('de','Fahrten','Fahrtdetails'), ('fr','Trajets','Détail du trajet'),
+              ('it','Viaggi','Dettaglio viaggio'), ('pt','Viagens','Detalhes da viagem')]
+    for density in (320, 378):
+        adb('shell','wm','density',density)
+        for locale,title,detail in labels:
+            launch('vehicle',locale)
+            assert_safe_buttons(dump())
+            screenshot(f'trips-entry-{density}-{locale}')
+            adb('shell','input','swipe',227,330,227,95,400)
+            tree=dump()
+            assert title in texts(tree), ('Swipe up did not open trips',locale,texts(tree))
+            screenshot(f'trips-summary-{density}-{locale}')
+            card=None
+            for _ in range(6):
+                card=next((n for n in tree.iter('node') if n.get('clickable')=='true' and any(
+                    c.get('text','').replace(',','.') == '5.2 L/100 km' for c in n.iter('node'))),None)
+                if card is not None:
+                    break
+                adb('shell','input','swipe',227,360,227,150,400)
+                tree=dump()
+            assert card is not None, 'Recent trip card missing'
+            screenshot(f'trips-list-{density}-{locale}')
+            tap(card)
+            tree=dump()
+            assert detail in texts(tree), ('Trip detail missing',locale,texts(tree))
+            screenshot(f'trips-detail-{density}-{locale}')
+            adb('shell','input','keyevent','KEYCODE_BACK')
+            assert '43%' not in texts(dump()), 'Closing detail must stay in history'
+            adb('shell','input','keyevent','KEYCODE_BACK')
+            assert '43%' in texts(dump()), 'Back from history must return to vehicle'
+            adb('shell','input','swipe',380,150,70,150,350)
+            assert '43%' not in texts(dump()), 'Horizontal controls navigation must still work'
+            print(f'OK trips swipe + detail + back + controls: {locale}, {density} dpi',flush=True)
+
+
 def check_status():
     for density in (320, 378):
         adb('shell', 'wm', 'density', density)
@@ -144,6 +181,9 @@ if __name__ == '__main__':
     timeout = adb('shell', 'settings', 'get', 'system', 'screen_off_timeout').decode().strip()
     adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '600000')
     try:
+        if '--trips' in sys.argv:
+            check_trips()
+            sys.exit(0)
         if '--status' in sys.argv:
             check_status()
             sys.exit(0)

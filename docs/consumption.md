@@ -1,5 +1,9 @@
 # Consumos y viajes — investigación para 0.3.1
 
+## Primera implementación
+
+La rama `feat/0.3.1-trip-consumption` incorpora una primera 0.3.1: gesto hacia arriba o toque en la foto del coche, resumen ponderado, lista y detalle. Se lee una página de hasta 50 viajes de los últimos 30 días al abrirla. La cobertura se muestra de forma explícita y el historial tiene carga/error independientes de los controles. El parser conserva valores ausentes y ceros reales; siete pruebas de core pasan, incluida una regresión de medias ponderadas. La comprobación real de la respuesta de esta cuenta está pendiente.
+
 ## Lectura de datos
 
 La sesión y las cabeceras de `ToyotaApi` sirven para `GET /v1/trips?from=AAAA-MM-DD&to=AAAA-MM-DD&route=false&summary=true&limit=50&offset=0`. Se identifica el coche con la cabecera `vin`, igual que en las demás lecturas. El límite máximo documentado es 50; `_metadata.pagination.nextOffset` permite continuar. La respuesta contiene `payload.trips` y, cuando Toyota lo proporciona, `payload.summary` con agregados mensuales e histogramas diarios. [Cliente y parámetros de pytoyoda](https://pytoyoda.github.io/pytoyoda/pytoyoda/api.html).

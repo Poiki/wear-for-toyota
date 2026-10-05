@@ -94,6 +94,8 @@ Descargan ADB de Google y el APK firmado más reciente, verifican SHA-256 e inst
 
 ## Desarrollo
 
+En la rama de desarrollo 0.3.1: desliza hacia arriba o toca la foto del coche para ver viajes recientes, media ponderada y detalle. Una página de hasta 50 viajes de los últimos 30 días, con cobertura explícita; la comparación de meses completos y el gráfico de consumo instantáneo aún no están implementados.
+
 - [Guía de estilo](design.md) e [investigación de consumos para 0.3.1](docs/consumption.md). El historial está en desarrollo y no forma parte de la release de diseño 0.3.0.
 
 - `android/core`: cliente Toyota (login, refresh, lecturas, comandos) y parseo de respuestas, con tests unitarios sobre fixtures reales: `./gradlew :core:testDebugUnitTest`.

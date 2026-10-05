@@ -16,6 +16,7 @@ import com.poiki.toyotawear.core.ToyotaApi
 import com.poiki.toyotawear.core.ToyotaAuth
 import com.poiki.toyotawear.core.ToyotaError
 import com.poiki.toyotawear.core.ToyotaLoginError
+import com.poiki.toyotawear.core.TripHistory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,9 @@ object Store {
     val snapshot = MutableStateFlow<Snapshot?>(null)
     val carImages = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
     val climateTemp = MutableStateFlow<Double?>(null)
+    val tripHistory = MutableStateFlow<TripHistory?>(null)
+    val tripsLoading = MutableStateFlow(false)
+    val tripsError = MutableStateFlow<String?>(null)
     val busy = MutableStateFlow<String?>(null)
     val error = MutableStateFlow<String?>(null)
     /** Outcome of the last remote command; the UI shows it and vibrates once. */
@@ -99,6 +103,8 @@ object Store {
             ?.apply { current()?.second?.let { put("vehicle", it) } }
             ?.let { runCatching { Snapshot.from(it) }.getOrNull() }
         climateTemp.value = null
+        tripHistory.value = null
+        tripsError.value = null
         result.value = null
         error.value = null
     }
@@ -126,6 +132,8 @@ object Store {
         snapshot.value = null
         carImages.value = emptyMap()
         climateTemp.value = null
+        tripHistory.value = null
+        tripsError.value = null
         result.value = null
         error.value = null
     }
@@ -219,6 +227,22 @@ object Store {
         climateTemp.value = (Math.round(value / TEMP_STEP) * TEMP_STEP).coerceIn(TEMP_MIN, TEMP_MAX)
     }
 
+    /** On-demand trip read; its failure must not disable the vehicle controls. */
+    suspend fun loadTrips() = withContext(Dispatchers.IO) {
+        if (tokens?.accessToken == "demo" || tripsLoading.value) return@withContext
+        val vin = selectedVin.value ?: return@withContext
+        tripsLoading.value = true
+        tripsError.value = null
+        try {
+            val history = api.trips(vin)
+            if (selectedVin.value == vin) tripHistory.value = history
+        } catch (e: Exception) {
+            if (selectedVin.value == vin) tripsError.value = humanize(e)
+        } finally {
+            tripsLoading.value = false
+        }
+    }
+
     /** Debug builds only: a fake car so every screen renders on an emulator without a Toyota account. */
     fun seedDemo() {
         val now = java.time.Instant.now().toString()
@@ -237,6 +261,11 @@ object Store {
         select("DEMO")
         climateTemp.value = 21.0
         tokens = Tokens("demo", "demo", Long.MAX_VALUE, "demo", "T") // in memory only; real calls fail with 401
+        tripHistory.value = TripHistory.from(JSONObject("""{"trips":[
+            {"id":"1","summary":{"startTs":"2026-10-05T08:24:00Z","length":18400,"duration":1320,"fuelConsumption":956.8},"hdc":{"evDistance":3864},"scores":{"global":82}},
+            {"id":"2","summary":{"startTs":"2026-10-04T10:24:00Z","length":36700,"duration":2520,"fuelConsumption":2165.3}},
+            {"id":"3","summary":{"startTs":"2026-10-03T11:10:00Z","length":12100,"duration":900}}
+        ],"_metadata":{"pagination":{"totalCount":12}}}"""))
         linked.value = true
     }
 

@@ -94,6 +94,8 @@ They download Google's ADB tools and the latest signed watch APK, verify SHA-256
 
 ## Development
 
+On the 0.3.1 development branch: swipe up or tap the car photo for recent trips, a weighted fuel average and trip details. One page (up to 50 trips from the last 30 days), with explicit coverage; full-month comparison and instantaneous consumption graphs are not implemented.
+
 - [Visual style](design.md) and [trip consumption research for 0.3.1](docs/consumption.md). The history feature is in development and is not included in the 0.3.0 design release.
 
 - `android/core`: Toyota client (login, refresh, reads, commands) and payload parsing, with unit tests on real fixtures: `./gradlew :core:testDebugUnitTest`.
