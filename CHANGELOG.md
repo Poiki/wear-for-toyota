@@ -1,11 +1,13 @@
 # Changelog
 
-## 0.3.1 — in development
+## 0.3.1 — 2026-10-05
 
 - Swipe up or tap the car photo to open recent trips; existing horizontal controls navigation remains available.
 - On-demand Toyota trip read (last 30 days, first page up to 50 trips), without waking the car or downloading GPS routes.
 - Weighted fuel average, sample coverage, trip list and detail: distance, duration, fuel, average speed, optional electric-distance share and Toyota score. Missing values stay unknown; zero fuel remains valid.
 - Separate loading/error state for history. Monthly comparisons and per-kilometre consumption charts await sufficient data.
+- Trip fields depend on the vehicle and Toyota account. Parsing and navigation have been tested; a live trip response for the development account has not yet been confirmed.
+- The phone sign-in confirmation reads configuration-aware string resources.
 
 ## 0.3.0 — 2026-10-05
 

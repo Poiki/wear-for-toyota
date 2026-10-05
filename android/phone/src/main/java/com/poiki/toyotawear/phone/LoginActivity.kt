@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -50,6 +51,7 @@ class LoginActivity : ComponentActivity() {
 @Composable
 private fun LoginScreen() {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -103,7 +105,7 @@ private fun LoginScreen() {
                             sendToWatch(context, tokens, if (savePassword) email.trim() to pw else null)
                         }
                     }.fold(
-                        onSuccess = { context.getString(R.string.phone_sent, it) },
+                        onSuccess = { resources.getString(R.string.phone_sent, it) },
                         onFailure = { it.message ?: it.javaClass.simpleName },
                     )
                     busy = false

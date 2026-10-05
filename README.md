@@ -14,6 +14,7 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 - **Status dial**: locked / unlocked, fuel or battery with a compact red gauge beside the car, range, mileage, and when the car last reported (tap it to wake the car for fresh data). Opening a car shows a loading ring until Toyota answers, so you never see old data.
 - **Controls dial** (swipe left): lock, unlock, climate and the last parked position (opens the maps app on the watch). Unlocking asks for an on-screen confirmation. After every command the app wakes the car and verifies the real state before telling you "Vehicle locked".
 - **Climate**: a dial you turn with the crown or the +/- buttons (18–29 °C); start or stop for 10 minutes.
+- **Trips and consumption** (swipe up or tap the car photo): up to 50 trips from the last 30 days, a distance-weighted fuel average and trip details. Distance, duration, fuel and average speed are shown; electric-distance share and Toyota score appear only when supplied. Coverage is explicit and missing values remain unknown.
 - **Standalone**: the watch talks to Toyota on its own over Wi-Fi or LTE, or through the Bluetooth proxy of the paired phone. The phone app is optional.
 - **Stays signed in**: Toyota's refresh token keeps the session alive. Optionally, save your password at sign-in (off by default, encrypted under its own key) and the watch signs in again by itself if Toyota ever ends the session.
 - **Updates itself**: at most once a day, when you open it, the watch looks for a new release on GitHub and offers to install it.
@@ -90,13 +91,12 @@ They download Google's ADB tools and the latest signed watch APK, verify SHA-256
 - Europe only; other regions use different backends.
 - The API is unofficial. When Toyota changes it, the app needs an update; pytoyoda's issue tracker is the early-warning system.
 - Remote commands depend on your car and subscription. Climate runs for 10 minutes and Toyota caps the number of starts per ignition cycle.
+- Trip history depends on the data Toyota supplies for your account and vehicle. It reads one page of up to 50 trips; the average covers trips with valid data, not necessarily the full month. A live trip response for the development account has not yet been confirmed. Full-month comparisons and instantaneous consumption graphs are not included.
 - Not on Google Play: Play forbids password input on the watch, and an unofficial API would not pass review. Sideload only.
 
 ## Development
 
-On the 0.3.1 development branch: swipe up or tap the car photo for recent trips, a weighted fuel average and trip details. One page (up to 50 trips from the last 30 days), with explicit coverage; full-month comparison and instantaneous consumption graphs are not implemented.
-
-- [Visual style](design.md) and [trip consumption research for 0.3.1](docs/consumption.md). The history feature is in development and is not included in the 0.3.0 design release.
+- [Visual style](design.md) and [trip consumption research](docs/consumption.md). Trip history is included from 0.3.1.
 
 - `android/core`: Toyota client (login, refresh, reads, commands) and payload parsing, with unit tests on real fixtures: `./gradlew :core:testDebugUnitTest`.
 - `android/watch` and `android/phone`: the two apps. Compose for Wear OS Material 3; the phone app is a single screen.

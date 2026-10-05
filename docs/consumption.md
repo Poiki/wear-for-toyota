@@ -2,7 +2,7 @@
 
 ## Primera implementación
 
-La rama `feat/0.3.1-trip-consumption` incorpora una primera 0.3.1: gesto hacia arriba o toque en la foto del coche, resumen ponderado, lista y detalle. Se lee una página de hasta 50 viajes de los últimos 30 días al abrirla. La cobertura se muestra de forma explícita y el historial tiene carga/error independientes de los controles. El parser conserva valores ausentes y ceros reales; siete pruebas de core pasan, incluida una regresión de medias ponderadas. La comprobación real de la respuesta de esta cuenta está pendiente.
+La versión 0.3.1 incluye gesto hacia arriba o toque en la foto del coche, resumen ponderado, lista y detalle. Se lee una página de hasta 50 viajes de los últimos 30 días al abrirla. La cobertura se muestra de forma explícita y el historial tiene carga/error independientes de los controles. El parser conserva valores ausentes y ceros reales; siete pruebas de core pasan, incluida una regresión de medias ponderadas. La comprobación real de la respuesta de esta cuenta está pendiente.
 
 ## Lectura de datos
 
@@ -38,4 +38,4 @@ Comparar con el mes anterior exige cobertura completa de ambos periodos. Los con
 
 Reutilizar el cliente autenticado, `work`, estado Compose y fondo `cockpit`; sin servidor ni nuevas dependencias. El historial falla por separado del estado del coche. No activar wake ni comandos. No guardar ni registrar coordenadas, tokens o VIN en los informes. Mantener el estado vacío y errores localizados, con reintento explícito.
 
-Confirmar con la cuenta real qué devuelve `/v1/trips`: presencia de viajes, unidades, fechas, combustible y paginación. Después verificar medias ponderadas, cero legítimo, campos ausentes, paginación parcial, gesto arriba y volver, y textos en seis idiomas y dos tamaños. Los datos de demo se reservan al emulador; la release del diseño no anuncia el historial como terminado.
+Pendiente: confirmar con la cuenta real qué devuelve `/v1/trips`: presencia de viajes, unidades, fechas, combustible y paginación. Las medias ponderadas, cero legítimo, campos ausentes y cobertura parcial se comprobaron con tests; el gesto arriba, detalle y volver se verificaron en emulador en seis idiomas y dos tamaños. Los datos de demo se reservan al emulador. La release documenta la validación y sus límites.

@@ -14,6 +14,7 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 - **Esfera de estado**: cerrado o abierto, combustible o batería con un indicador rojo compacto junto al coche, autonomía, kilometraje y cuándo informó el coche por última vez (tócalo para despertar al coche y pedir datos nuevos). Al abrir un coche se muestra un anillo de carga hasta que Toyota responde, así nunca ves datos viejos.
 - **Esfera de controles** (desliza a la izquierda): cerrar, abrir, climatizador y última posición aparcado (abre la app de mapas del reloj). Abrir pide confirmación en pantalla. Tras cada orden la app despierta al coche y verifica su estado real antes de decirte "Vehículo cerrado".
 - **Climatizador**: una esfera que giras con la corona o con los botones +/− (18–29 °C); encender o apagar durante 10 minutos.
+- **Viajes y consumos** (desliza hacia arriba o toca la foto del coche): hasta 50 viajes de los últimos 30 días, media de consumo ponderada por distancia y detalle de cada trayecto. Muestra distancia, duración, combustible y velocidad media; porcentaje eléctrico y puntuación solo cuando Toyota los proporciona. Indica la cobertura y conserva los datos ausentes como desconocidos.
 - **Autónoma**: el reloj habla con Toyota por sí mismo por Wi-Fi o LTE, o a través del Bluetooth del móvil emparejado. La app de móvil es opcional.
 - **Mantiene la sesión**: el refresh token de Toyota mantiene la sesión. Si quieres, guarda la contraseña al iniciar sesión (desactivado por defecto, cifrada con su propia clave) y el reloj volverá a entrar solo si Toyota cierra la sesión.
 - **Se actualiza sola**: como mucho una vez al día, al abrirla, el reloj busca una release nueva en GitHub y te ofrece instalarla.
@@ -90,13 +91,12 @@ Descargan ADB de Google y el APK firmado más reciente, verifican SHA-256 e inst
 - Solo Europa; otras regiones usan backends distintos.
 - La API no es oficial. Cuando Toyota la cambie, la app necesitará una actualización; las incidencias de pytoyoda son el sistema de alerta temprana.
 - Los comandos remotos dependen del coche y de la suscripción. El climatizador funciona 10 minutos y Toyota limita los arranques por ciclo de contacto.
+- El historial depende de los datos que Toyota devuelva para tu cuenta y coche. Consulta una página de hasta 50 viajes; la media corresponde a los viajes con datos, no necesariamente al mes completo. La respuesta real de viajes de la cuenta de desarrollo aún no se ha confirmado. No incluye comparación mensual ni gráfico de consumo instantáneo.
 - No está en Google Play: Play prohíbe introducir contraseñas en el reloj y una API no oficial no pasaría la revisión. Solo instalación manual.
 
 ## Desarrollo
 
-En la rama de desarrollo 0.3.1: desliza hacia arriba o toca la foto del coche para ver viajes recientes, media ponderada y detalle. Una página de hasta 50 viajes de los últimos 30 días, con cobertura explícita; la comparación de meses completos y el gráfico de consumo instantáneo aún no están implementados.
-
-- [Guía de estilo](design.md) e [investigación de consumos para 0.3.1](docs/consumption.md). El historial está en desarrollo y no forma parte de la release de diseño 0.3.0.
+- [Guía de estilo](design.md) e [investigación de consumos](docs/consumption.md). El historial está incluido desde la 0.3.1.
 
 - `android/core`: cliente Toyota (login, refresh, lecturas, comandos) y parseo de respuestas, con tests unitarios sobre fixtures reales: `./gradlew :core:testDebugUnitTest`.
 - `android/watch` y `android/phone`: las dos apps. Compose for Wear OS Material 3; la app de móvil es una sola pantalla.
