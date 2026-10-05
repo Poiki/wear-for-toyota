@@ -97,7 +97,10 @@ def check_trips(densities=(320, 378)):
                 card=next((n for n in tree.iter('node') if n.get('clickable')=='true' and any(
                     c.get('text','').replace(',','.') == '5.2 L/100 km' for c in n.iter('node'))),None)
                 if card is not None:
-                    break
+                    _,top,_,bottom = map(int,re.findall(r'\d+',card.get('bounds')))
+                    if top >= 40 and bottom <= 414:
+                        break
+                    card = None  # Lazy lists can expose semantics for clipped, untappable cards.
                 adb('shell','input','swipe',227,360,227,150,400)
                 tree=dump()
             assert card is not None, 'Recent trip card missing'
