@@ -12,7 +12,8 @@ try {
     if ($asset[0].browser_download_url -notlike "https://github.com/$repo/releases/download/*") { throw 'Unexpected APK source.' }
     $apk = Join-Path $folder 'watch.apk'
     Invoke-WebRequest $asset[0].browser_download_url -OutFile $apk -UseBasicParsing
-    if ((Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant() -ne $asset[0].digest.Substring(7)) { throw 'APK checksum mismatch.' }
+    $actual = [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash([IO.File]::ReadAllBytes($apk))).Replace('-', '').ToLowerInvariant()
+    if ($actual -ne $asset[0].digest.Substring(7)) { throw 'APK checksum mismatch.' }
     if ($CheckOnly) { Write-Host "OK: $($release.tag_name), APK SHA-256 verified. No device changes."; exit 0 }
     $adb = Join-Path $folder 'platform-tools/adb.exe'
     if (!(Test-Path -LiteralPath $adb)) {
