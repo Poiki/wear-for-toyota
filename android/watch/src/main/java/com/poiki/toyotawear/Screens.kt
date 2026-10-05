@@ -9,11 +9,13 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,8 +23,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicSecureTextField
@@ -43,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -57,11 +62,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.LocalReduceMotion
@@ -69,21 +78,16 @@ import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.HorizontalPager
 import androidx.wear.compose.foundation.pager.rememberPagerState
-import androidx.wear.compose.material3.AlertDialog
-import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Card
 import androidx.wear.compose.material3.CircularProgressIndicator
-import androidx.wear.compose.material3.CompactButton
 import androidx.wear.compose.material3.ConfirmationDialog
 import androidx.wear.compose.material3.ConfirmationDialogDefaults
-import androidx.wear.compose.material3.EdgeButton
-import androidx.wear.compose.material3.EdgeButtonSize
 import androidx.wear.compose.material3.FilledIconButton
 import androidx.wear.compose.material3.FilledTonalIconButton
-import androidx.wear.compose.material3.HorizontalPagerScaffold
+import androidx.wear.compose.material3.Dialog
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.ListHeader
@@ -100,7 +104,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /** "My Garage": one big card per car. Nothing is listed until the cars and their pictures are ready. */
@@ -123,24 +126,32 @@ fun GarageScreen(
         }
         return
     }
-    val state = rememberTransformingLazyColumnState()
-    ScreenScaffold(scrollState = state) { padding ->
-        TransformingLazyColumn(state = state, contentPadding = padding) {
-            item { ListHeader { Text(stringResource(R.string.garage_title)) } }
-            items(vehicles.size) { i ->
-                val v = vehicles[i]
-                val vin = v.optString("vin")
-                Card(onClick = { onSelect(vin) }, modifier = Modifier.fillMaxWidth().enter(i)) {
-                    CarPicture(images[vin], Modifier.fillMaxWidth().height(96.dp))
-                    Text(
-                        Snapshot.displayName(v),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                        textAlign = TextAlign.Center,
-                    )
+    val pager = rememberPagerState(pageCount = { vehicles.size })
+    HorizontalPager(state = pager) { page ->
+        val vehicle = vehicles[page]
+        val vin = vehicle.optString("vin")
+        Dial {
+            Box(Modifier.fillMaxSize().cockpit()) {
+                Column(Modifier.align(Alignment.TopCenter).offset(y = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.garage_title), fontSize = 14.sp, lineHeight = 18.sp, textAlign = TextAlign.Center)
+                    if (vehicles.size > 1) Text("${number(page + 1)}/${number(vehicles.size)}", fontSize = 8.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Card(onClick = { onSelect(vin) }, contentPadding = PaddingValues(10.dp),
+                    colors = androidx.wear.compose.material3.CardDefaults.cardColors(containerColor = Color.Transparent),
+                    modifier = Modifier.size(174.dp, 126.dp).align(Alignment.TopCenter).offset(y = 48.dp)
+                        .clip(RoundedCornerShape(24.dp)).cockpit().border(.5.dp, Color(0xFF393C43), RoundedCornerShape(24.dp))) {
+                    BasicText(Snapshot.displayName(vehicle), modifier = Modifier.fillMaxWidth(),
+                        style = TextStyle(fontSize = 13.sp, lineHeight = 15.sp, color = Color.White, textAlign = TextAlign.Center),
+                        maxLines = 2, autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 13.sp))
+                    CarPicture(images[vin], Modifier.fillMaxWidth().height(74.dp).padding(top = 4.dp))
+                }
+                OutlinedButton(onClick = onUnlink, enabled = busy == null,
+                    modifier = Modifier.size(128.dp, 40.dp).align(Alignment.TopCenter).offset(y = 174.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.unlink), fontSize = 11.sp, lineHeight = 14.sp, textAlign = TextAlign.Center)
+                    }
                 }
             }
-            item { OutlinedButton(onClick = onUnlink, enabled = busy == null, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.unlink)) } }
         }
     }
 }
@@ -160,6 +171,7 @@ fun VehicleScreen(
     onClimate: () -> Unit,
     onMap: (Double, Double) -> Unit,
 ) {
+    var confirm by remember { mutableStateOf(false) }
     Crossfade(targetState = snapshot != null, animationSpec = tween(450), label = "vehicle") { ready ->
         val s = snapshot
         if (!ready || s == null) {
@@ -168,14 +180,44 @@ fun VehicleScreen(
             }
         } else {
             val pager = rememberPagerState(pageCount = { 2 })
-            HorizontalPagerScaffold(pagerState = pager) {
-                HorizontalPager(state = pager) { page ->
-                    AnimatedPage(pageIndex = page, pagerState = pager) {
-                        Dial { if (page == 0) StatusFace(s, busy, onWake) else ControlsFace(s, busy, onLock, onUnlock, onClimate, onMap) }
+            HorizontalPager(state = pager) { page ->
+                AnimatedPage(pageIndex = page, pagerState = pager) {
+                    Dial {
+                        if (page == 0) StatusFace(s, car, busy, onWake, onLock, { confirm = true }, onClimate, onMap)
+                        else ControlsFace(s, busy, onLock, { confirm = true }, onClimate, onMap)
                     }
                 }
             }
+            if (busy != null) WaitFace(car, busy, working = true)
             ErrorNotice(error, onDismiss = onErrorShown)
+        }
+    }
+    Dialog(visible = confirm, onDismissRequest = { confirm = false }) {
+        Dial {
+            Box(Modifier.fillMaxSize().cockpit()) {
+                Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.TopCenter) { BrandHeader() }
+                CarPicture(car, Modifier.size(166.dp, 74.dp).align(Alignment.TopCenter).offset(y = 48.dp).graphicsLayer { alpha = .35f })
+                NeonGauge({ .3f }, Modifier.size(66.dp).align(Alignment.TopCenter).offset(y = 55.dp)) {
+                    Icon(painterResource(R.drawable.ic_lock_open), contentDescription = null, modifier = Modifier.size(28.dp))
+                }
+                Column(Modifier.align(Alignment.TopCenter).offset(y = 123.dp).width(170.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.confirm_unlock), fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.unlock_explanation), fontSize = 9.sp, lineHeight = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center, modifier = Modifier.padding(top = 5.dp))
+                }
+                Row(Modifier.align(Alignment.TopCenter).offset(y = 168.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(onClick = { confirm = false }, modifier = Modifier.size(68.dp, 40.dp).neonSurface(),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)) {
+                        FitText(stringResource(R.string.cancel), TextStyle(fontSize = 10.sp, lineHeight = 12.sp), Color.White, Modifier.fillMaxWidth(), minFontSize = 7.sp)
+                    }
+                    Button(onClick = { confirm = false; onUnlock() }, modifier = Modifier.size(68.dp, 40.dp).neonSurface(active = true),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)) {
+                        FitText(stringResource(R.string.unlock), TextStyle(fontSize = 10.sp, lineHeight = 12.sp), Color.White, Modifier.fillMaxWidth(), minFontSize = 7.sp)
+                    }
+                }
+            }
         }
     }
 }
@@ -196,125 +238,89 @@ private fun ErrorNotice(error: String?, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         text = { Text(text, textAlign = TextAlign.Center, style = MaterialTheme.typography.titleSmall) },
         colors = ConfirmationDialogDefaults.failureColors(),
-    ) { ConfirmationDialogDefaults.FailureIcon() }
+    ) { ConfirmationDialogDefaults.GenericFailureIcon() }
 }
 
-/** Status dial: lock state, fuel (or battery) with its arc, range, mileage and when the car last reported. */
+/** The reference cockpit: real car, compact energy dial, known data and three direct actions. */
 @Composable
-private fun StatusFace(s: Snapshot, busy: String?, onWake: () -> Unit) {
+private fun StatusFace(
+    s: Snapshot, car: Bitmap?, busy: String?, onWake: () -> Unit,
+    onLock: () -> Unit, onUnlock: () -> Unit, onClimate: () -> Unit, onMap: (Double, Double) -> Unit,
+) {
     val energy = s.fuelPct ?: s.batteryPct
     val arc = remember { Animatable(0f) }
     val reduceMotion = LocalReduceMotion.current
     LaunchedEffect(energy) {
-        val target = (energy ?: 0) / 100f
-        if (reduceMotion) arc.snapTo(target) else arc.animateTo(target, tween(1100, easing = FastOutSlowInEasing))
+        val target = ((energy ?: 0) / 100f).coerceIn(0f, 1f)
+        if (reduceMotion) arc.snapTo(target) else arc.animateTo(target, tween(800, easing = FastOutSlowInEasing))
     }
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().cockpit()) {
+        Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.TopCenter) { BrandHeader(page = 0) }
+        CarPicture(car, Modifier.size(133.dp, 58.dp).align(Alignment.TopCenter).offset(x = (-23).dp, y = 49.dp).enter())
         if (energy != null) {
-            CircularProgressIndicator(
-                progress = { arc.value },
-                modifier = Modifier.fillMaxSize().padding(3.dp),
-                startAngle = 135f,
-                endAngle = 45f,
-                strokeWidth = 6.dp,
-            )
+            NeonGauge({ arc.value }, Modifier.size(49.dp).align(Alignment.TopEnd).offset(x = (-18).dp, y = 56.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${countUp(energy)}%", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Icon(painterResource(if (s.fuelPct != null) R.drawable.ic_fuel else R.drawable.ic_battery),
+                        contentDescription = stringResource(if (s.fuelPct != null) R.string.fuel else R.string.battery), modifier = Modifier.size(11.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
-        Column(
-            Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 28.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            LockChip(s, Modifier.enter(0))
-            if (energy != null) {
-                Row(Modifier.padding(top = 8.dp).enter(1), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        painterResource(if (s.fuelPct != null) R.drawable.ic_fuel else R.drawable.ic_battery),
-                        contentDescription = stringResource(if (s.fuelPct != null) R.string.fuel else R.string.battery),
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text("${countUp(energy)}%", style = MaterialTheme.typography.displaySmall, maxLines = 1)
+        Column(Modifier.fillMaxWidth().padding(top = 107.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            LockChip(s)
+            Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 1.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.range_label), fontSize = 8.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FitText((s.fuelRangeKm ?: s.evRangeKm)?.let { km(it.roundToInt()) } ?: "—", TextStyle(fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold), Color.White)
+                }
+                Spacer(Modifier.height(22.dp).width(.5.dp).background(Color(0xFF36383E)))
+                Column(Modifier.weight(1.2f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(stringResource(R.string.odometer), fontSize = 8.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    FitText(s.odometerKm?.let { km(it.roundToInt()) } ?: "—", TextStyle(fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold), Color.White)
+                }
+                Spacer(Modifier.height(22.dp).width(.5.dp).background(Color(0xFF36383E)))
+                FilledIconButton(onClick = onWake, enabled = busy == null, modifier = Modifier.size(48.dp, 24.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.Transparent)) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(painterResource(R.drawable.ic_refresh), contentDescription = stringResource(R.string.refresh) + ", " + whenText(s.statusAt ?: s.fetchedAt), modifier = Modifier.size(12.dp))
+                        Text(shortTimeText(s.statusAt ?: s.fetchedAt), fontSize = 8.sp, lineHeight = 10.sp, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
-            (s.fuelRangeKm ?: s.evRangeKm)?.let { range ->
-                FitText(stringResource(R.string.range_format, number(countUp(range.roundToInt()))), MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.onSurfaceVariant, Modifier.enter(1))
-            }
-            s.odometerKm?.let { odometer ->
-                Row(Modifier.padding(top = 6.dp).enter(2), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(painterResource(R.drawable.ic_odometer), contentDescription = stringResource(R.string.odometer), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(6.dp))
-                    FitText(km(odometer.roundToInt()), MaterialTheme.typography.titleMedium, MaterialTheme.colorScheme.onSurface)
-                }
-            }
-            // When the car last reported; tapping asks the car itself for fresh data.
-            CompactButton(
-                onClick = onWake,
-                enabled = busy == null,
-                colors = ButtonDefaults.filledTonalButtonColors(),
-                icon = {
-                    if (busy != null) CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                    else Icon(painterResource(R.drawable.ic_refresh), contentDescription = stringResource(R.string.refresh), modifier = Modifier.size(16.dp))
-                },
-                modifier = Modifier.padding(top = 8.dp).enter(3),
-            ) { FitText(busy ?: whenText(s.statusAt ?: s.fetchedAt), MaterialTheme.typography.labelMedium, MaterialTheme.colorScheme.onSurface) }
+        }
+        Row(Modifier.align(Alignment.TopCenter).offset(y = 154.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (s.remoteActive) NeonAction(if (s.locked == true) R.drawable.ic_lock_open else R.drawable.ic_lock,
+                if (s.locked == true) R.string.unlock else R.string.lock, enabled = busy == null,
+                active = s.locked == false, onClick = if (s.locked == true) onUnlock else onLock)
+            if (s.remoteActive) NeonAction(R.drawable.ic_fan, R.string.climate, enabled = busy == null,
+                active = s.climate == "running" || s.climate == "starting", onClick = onClimate)
+            val lat = s.lat
+            val lon = s.lon
+            if (lat != null && lon != null) NeonAction(R.drawable.ic_location, R.string.map) { onMap(lat, lon) }
         }
     }
 }
 
-/** Controls dial: lock, unlock (confirmed), climate and the map as round buttons; the running one shows a ring. */
+/** Four controls use the same centered, safe round buttons as the dashboard. */
 @Composable
 private fun ControlsFace(
-    s: Snapshot,
-    busy: String?,
-    onLock: () -> Unit,
-    onUnlock: () -> Unit,
-    onClimate: () -> Unit,
-    onMap: (Double, Double) -> Unit,
+    s: Snapshot, busy: String?, onLock: () -> Unit, onUnlock: () -> Unit,
+    onClimate: () -> Unit, onMap: (Double, Double) -> Unit,
 ) {
-    var confirm by remember { mutableStateOf(false) }
-    var running by remember { mutableStateOf<Int?>(null) }
-    LaunchedEffect(busy) { if (busy == null) running = null }
-    val lat = s.lat
-    val lon = s.lon
-    Column(
-        Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 22.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Crossfade(targetState = busy, label = "controlsLine") { line ->
-            if (line == null) LockChip(s, compact = true) else FitText(line, MaterialTheme.typography.labelMedium, MaterialTheme.colorScheme.onSurfaceVariant)
+    Box(Modifier.fillMaxSize().cockpit()) {
+        Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.TopCenter) { BrandHeader(page = 1) }
+        Box(Modifier.fillMaxWidth().padding(top = 60.dp), contentAlignment = Alignment.TopCenter) { LockChip(s, compact = true) }
+        Row(Modifier.align(Alignment.TopCenter).offset(y = 84.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            NeonAction(R.drawable.ic_lock, R.string.lock, enabled = busy == null && s.remoteActive, onClick = onLock)
+            NeonAction(R.drawable.ic_lock_open, R.string.unlock, enabled = busy == null && s.remoteActive, onClick = onUnlock)
         }
-        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Control(R.drawable.ic_lock, R.string.lock, working = running == 0, enabled = busy == null, modifier = Modifier.enter(0)) { running = 0; onLock() }
-            Control(R.drawable.ic_lock_open, R.string.unlock, working = running == 1, enabled = busy == null, modifier = Modifier.enter(1)) { confirm = true }
+        Row(Modifier.align(Alignment.TopCenter).offset(y = 140.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            NeonAction(R.drawable.ic_fan, R.string.climate, enabled = busy == null && s.remoteActive,
+                active = s.climate == "running" || s.climate == "starting", onClick = onClimate)
+            val lat = s.lat
+            val lon = s.lon
+            if (lat != null && lon != null) NeonAction(R.drawable.ic_location, R.string.map) { onMap(lat, lon) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Control(R.drawable.ic_fan, R.string.climate, working = false, enabled = true, highlighted = s.climate == "running" || s.climate == "starting", modifier = Modifier.enter(2), onClick = onClimate)
-            if (lat != null && lon != null) Control(R.drawable.ic_location, R.string.map, working = false, enabled = true, modifier = Modifier.enter(3)) { onMap(lat, lon) }
-        }
-    }
-    AlertDialog(
-        visible = confirm,
-        onDismissRequest = { confirm = false },
-        confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { confirm = false; running = 1; onUnlock() }) },
-        title = { Text(stringResource(R.string.confirm_unlock)) },
-    )
-}
-
-@Composable
-private fun Control(icon: Int, label: Int, working: Boolean, enabled: Boolean, modifier: Modifier = Modifier, highlighted: Boolean = false, onClick: () -> Unit) {
-    Column(modifier.width(80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-            FilledIconButton(
-                onClick = onClick,
-                enabled = enabled,
-                modifier = Modifier.size(48.dp),
-                colors = if (highlighted) IconButtonDefaults.filledIconButtonColors() else IconButtonDefaults.filledTonalIconButtonColors(),
-            ) { Icon(painterResource(icon), contentDescription = stringResource(label), modifier = Modifier.size(24.dp)) }
-            if (working) CircularProgressIndicator(modifier = Modifier.fillMaxSize(), strokeWidth = 3.dp)
-        }
-        FitText(stringResource(label), MaterialTheme.typography.labelSmall, MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -344,24 +350,28 @@ private fun LockChip(s: Snapshot, modifier: Modifier = Modifier, compact: Boolea
         label = "lockFore",
     )
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        val pill = if (compact) Modifier else Modifier.background(back, CircleShape).padding(horizontal = 14.dp, vertical = 6.dp)
+        val pill = if (compact) Modifier else Modifier.background(back, CircleShape).border(.5.dp, Color(0xFF44474E), CircleShape).padding(horizontal = 12.dp, vertical = 3.dp)
         Row(pill, verticalAlignment = Alignment.CenterVertically) {
             Crossfade(targetState = s.locked == true, label = "lockIcon") { locked ->
-                Icon(painterResource(if (locked) R.drawable.ic_lock else R.drawable.ic_lock_open), contentDescription = null, modifier = Modifier.size(if (compact) 16.dp else 20.dp), tint = fore)
+                Icon(painterResource(if (locked) R.drawable.ic_lock else R.drawable.ic_lock_open), contentDescription = null, modifier = Modifier.size(14.dp), tint = fore)
             }
             Spacer(Modifier.width(6.dp))
-            FitText(lockText(s), if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge, fore)
+            val doorsOpen = (s.openDoors ?: 0) > 0
+            FitText(lockText(s) + if (doorsOpen) " · " + stringResource(R.string.door_open) else "",
+                TextStyle(fontSize = 11.sp, lineHeight = 13.sp, fontWeight = FontWeight.SemiBold),
+                if (doorsOpen) scheme.error else fore, Modifier.widthIn(max = 124.dp))
         }
-        if ((s.openDoors ?: 0) > 0) FitText(stringResource(R.string.door_open), MaterialTheme.typography.labelSmall, scheme.error, Modifier.padding(top = 2.dp))
     }
 }
 
 /** Full-screen wait: an indeterminate ring along the edge, the car if known, one line of text and optional actions. */
 @Composable
 fun WaitFace(car: Bitmap?, text: String, working: Boolean, actions: @Composable ColumnScope.() -> Unit = {}) {
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().cockpit(), contentAlignment = Alignment.Center) {
         if (working) CircularProgressIndicator(modifier = Modifier.fillMaxSize().padding(3.dp), strokeWidth = 6.dp)
         Column(Modifier.padding(horizontal = 30.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            BrandHeader()
+            Spacer(Modifier.height(12.dp))
             car?.let { CarPicture(it, Modifier.fillMaxWidth().height(64.dp).enter()) }
             Text(
                 text,
@@ -385,41 +395,37 @@ fun ResultDialogs(result: Store.CommandResult?) {
         visible = pending,
         onDismissRequest = { shown = result?.at },
         text = { Text(result?.text ?: "", textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium) },
-        colors = if (ok) ConfirmationDialogDefaults.successColors() else ConfirmationDialogDefaults.failureColors(),
+        colors = if (ok) ConfirmationDialogDefaults.successColors(iconColor = Color.White, iconContainerColor = Color(0xFF3B0710), textColor = Color.White) else ConfirmationDialogDefaults.failureColors(),
     ) {
-        if (ok) ConfirmationDialogDefaults.SuccessIcon() else ConfirmationDialogDefaults.FailureIcon()
+        NeonGauge({ if (ok) 1f else .25f }, Modifier.size(76.dp)) {
+            if (ok) ConfirmationDialogDefaults.SuccessIcon() else ConfirmationDialogDefaults.GenericFailureIcon()
+        }
     }
 }
 
-/** Climate as a dial: the arc is the temperature, the crown or the +/- buttons change it, the edge button starts or stops. */
+/** Crown and +/- control the real Toyota set point; the dial is static between interactions. */
 @Composable
 fun ClimateScreen(
-    snapshot: Snapshot?,
-    temp: Double,
-    busy: String?,
-    error: String?,
-    result: Store.CommandResult?,
-    onTemp: (Double) -> Unit,
-    onToggle: (Boolean) -> Unit,
+    snapshot: Snapshot?, car: Bitmap?, temp: Double, busy: String?, error: String?,
+    onTemp: (Double) -> Unit, onToggle: (Boolean) -> Unit,
 ) {
     val running = snapshot?.climate == "running" || snapshot?.climate == "starting"
+    val lowerTemperature = stringResource(R.string.temperature_down)
+    val higherTemperature = stringResource(R.string.temperature_up)
     val haptic = LocalHapticFeedback.current
     val focus = remember { FocusRequester() }
-    // The crown reports many small scroll events; one temperature step per ROTARY_STEP_PX of travel.
     var travel by remember { mutableStateOf(0f) }
     LaunchedEffect(Unit) { focus.requestFocus() }
     val arc = remember { Animatable(0f) }
     val reduceMotion = LocalReduceMotion.current
     LaunchedEffect(temp) {
-        val target = ((temp - Store.TEMP_MIN) / (Store.TEMP_MAX - Store.TEMP_MIN)).toFloat()
-        // Sweeps in on opening, then glides one step at a time.
-        if (reduceMotion) arc.snapTo(target) else arc.animateTo(target, tween(if (arc.value == 0f) 700 else 160, easing = FastOutSlowInEasing))
+        val target = ((temp - Store.TEMP_MIN) / (Store.TEMP_MAX - Store.TEMP_MIN)).toFloat().coerceIn(0f, 1f)
+        if (reduceMotion) arc.snapTo(target) else arc.animateTo(target, tween(250, easing = FastOutSlowInEasing))
     }
     Dial {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .onRotaryScrollEvent { event ->
+        Box(Modifier.fillMaxSize().cockpit(cabin = running)
+            .onRotaryScrollEvent { event ->
+                if (busy == null && !running) {
                     travel += event.verticalScrollPixels
                     val steps = (travel / ROTARY_STEP_PX).toInt()
                     if (steps != 0) {
@@ -427,45 +433,46 @@ fun ClimateScreen(
                         onTemp(temp + steps * Store.TEMP_STEP)
                         haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                     }
-                    true
                 }
-                .focusRequester(focus)
-                .focusable(),
-        ) {
-            CircularProgressIndicator(
-                progress = { arc.value },
-                modifier = Modifier.fillMaxSize().padding(3.dp),
-                startAngle = 135f,
-                endAngle = 45f,
-                strokeWidth = 8.dp,
-            )
-            Column(
-                Modifier.fillMaxSize().padding(start = 28.dp, end = 28.dp, top = 36.dp, bottom = 64.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(stringResource(R.string.climate), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FilledTonalIconButton(onClick = { onTemp(temp - Store.TEMP_STEP) }, modifier = Modifier.size(48.dp)) { Text("−", style = MaterialTheme.typography.titleLarge) }
-                    Text(tempText(temp), style = MaterialTheme.typography.displayMedium, modifier = Modifier.padding(horizontal = 10.dp))
-                    FilledTonalIconButton(onClick = { onTemp(temp + Store.TEMP_STEP) }, modifier = Modifier.size(48.dp)) { Text("+", style = MaterialTheme.typography.titleLarge) }
-                }
-                val line = busy ?: result?.text ?: error ?: snapshot?.climate?.let { climateText(it) } ?: stringResource(R.string.climate_off)
-                val lineColor = when {
-                    busy != null -> MaterialTheme.colorScheme.onSurfaceVariant
-                    error != null || result?.ok == false -> MaterialTheme.colorScheme.error
-                    running || result?.ok == true -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                }
-                Text(line, style = MaterialTheme.typography.bodySmall, color = lineColor, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp).animateContentSize())
+                true
+            }.focusRequester(focus).focusable()) {
+            Column(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                BrandHeader()
+                Text(stringResource(R.string.climate), fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+                Text(stringResource(if (running) R.string.climate_on else R.string.climate_set_hint), fontSize = 9.sp, lineHeight = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                EdgeButton(onClick = { onToggle(!running) }, enabled = busy == null, buttonSize = EdgeButtonSize.Small) {
-                    Text(stringResource(if (running) R.string.turn_off else R.string.turn_on))
+            NeonGauge({ arc.value }, Modifier.size(106.dp).align(Alignment.TopCenter).offset(y = 68.dp), ticks = true) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(painterResource(R.drawable.ic_thermostat), contentDescription = null, tint = NeonRed, modifier = Modifier.size(17.dp))
+                    FitText(tempText(temp) + "C", TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold), Color.White, Modifier.width(74.dp), minFontSize = 18.sp)
+                    Text("${Store.TEMP_MIN.toInt()} – ${Store.TEMP_MAX.toInt()} °C", fontSize = 8.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            if (!running) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = 103.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    FilledTonalIconButton(onClick = { onTemp(temp - Store.TEMP_STEP) }, enabled = busy == null && temp > Store.TEMP_MIN,
+                        modifier = Modifier.size(48.dp).neonSurface().semantics { contentDescription = lowerTemperature }, colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent, contentColor = Color.White)) { Text("−", fontSize = 26.sp, lineHeight = 30.sp, textAlign = TextAlign.Center) }
+                    FilledTonalIconButton(onClick = { onTemp(temp + Store.TEMP_STEP) }, enabled = busy == null && temp < Store.TEMP_MAX,
+                        modifier = Modifier.size(48.dp).neonSurface().semantics { contentDescription = higherTemperature }, colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent, contentColor = Color.White)) { Text("+", fontSize = 26.sp, lineHeight = 30.sp, textAlign = TextAlign.Center) }
+                }
+            }
+            Row(Modifier.align(Alignment.TopCenter).offset(y = 153.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(painterResource(R.drawable.ic_fan), contentDescription = null, modifier = Modifier.size(12.dp), tint = if (running) NeonRed else Color(0xFFADB1B8))
+                Text(stringResource(if (running) R.string.climate_on else R.string.climate_off), fontSize = 9.sp, lineHeight = 11.sp, modifier = Modifier.padding(start = 4.dp))
+            }
+            Button(onClick = { onToggle(!running) }, enabled = busy == null && snapshot?.remoteActive == true,
+                contentPadding = PaddingValues(horizontal = 10.dp),
+                modifier = Modifier.size(132.dp, 40.dp).align(Alignment.TopCenter).offset(y = 171.dp).neonSurface(active = true),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(R.drawable.ic_fan), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(if (running) R.string.turn_off else R.string.turn_on), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                }
+            }
+            if (busy != null) WaitFace(car, busy, working = true)
         }
     }
+    ErrorNotice(error) { Store.error.value = null }
 }
 
 private const val ROTARY_STEP_PX = 48f
@@ -481,9 +488,13 @@ fun LinkScreen(error: String?, onLoginHere: () -> Unit) {
                 Button(
                     onClick = onLoginHere,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).enter(2),
-                    icon = { Icon(painterResource(R.drawable.ic_login), contentDescription = null) },
-                    label = { Text(stringResource(R.string.login_here)) },
-                )
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        Icon(painterResource(R.drawable.ic_login), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.login_here), fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.Center)
+                    }
+                }
             }
             error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
         }
@@ -510,7 +521,7 @@ fun LoginScreen(busy: String?, error: String?, onSubmit: (email: String, passwor
                     onClick = { onSubmit(email.text.toString().trim(), password.text.toString(), lexus, savePassword) },
                     enabled = busy == null && email.text.isNotBlank() && password.text.isNotBlank(),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
-                ) { Text(busy ?: stringResource(R.string.sign_in)) }
+                ) { Text(busy ?: stringResource(R.string.sign_in), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
             }
             error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
             item { Centered(stringResource(if (savePassword) R.string.login_note_saved else R.string.login_note), MaterialTheme.typography.labelSmall, MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -531,12 +542,12 @@ private fun CarPicture(picture: Bitmap?, modifier: Modifier) {
 
 /** One line that shrinks (down to 9 sp) instead of wrapping or being cut: label lengths vary a lot between languages. */
 @Composable
-private fun FitText(text: String, style: TextStyle, color: Color, modifier: Modifier = Modifier) = BasicText(
+private fun FitText(text: String, style: TextStyle, color: Color, modifier: Modifier = Modifier, minFontSize: TextUnit = 9.sp) = BasicText(
     text,
     modifier,
     style = style.copy(color = color, textAlign = TextAlign.Center),
     maxLines = 1,
-    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = style.fontSize),
+    autoSize = TextAutoSize.StepBased(minFontSize = if (style.fontSize.value < minFontSize.value) style.fontSize else minFontSize, maxFontSize = style.fontSize),
 )
 
 /** Fades and lifts content in once; [order] staggers siblings by 70 ms. Runs in the graphics layer, so nothing recomposes. */
@@ -610,17 +621,10 @@ private fun lockText(s: Snapshot): String = when (s.locked) {
 }
 
 @Composable
-private fun climateText(status: String): String = when (status) {
-    "running" -> stringResource(R.string.climate_on)
-    "starting" -> stringResource(R.string.climate_starting)
-    "stopping" -> stringResource(R.string.climate_stopping)
-    "stopped" -> stringResource(R.string.climate_off)
-    else -> status
-}
+private fun tempText(t: Double) = if (t % 1.0 == 0.0) "${t.toInt()}°" else String.format(LocalConfiguration.current.locales[0], "%.1f°", t)
 
-private fun tempText(t: Double) = if (t % 1.0 == 0.0) "${t.toInt()}°" else String.format(Locale.getDefault(), "%.1f°", t)
-
-private fun number(value: Int): String = NumberFormat.getIntegerInstance().format(value)
+@Composable
+private fun number(value: Int): String = NumberFormat.getIntegerInstance(LocalConfiguration.current.locales[0]).format(value)
 
 @Composable
 private fun km(value: Int): String = stringResource(R.string.km_format, number(value))
@@ -631,10 +635,13 @@ private fun whenText(epochMs: Long): String {
     val zone = ZoneId.systemDefault()
     val t = Instant.ofEpochMilli(epochMs).atZone(zone)
     val today = LocalDate.now(zone)
+    val locale = LocalConfiguration.current.locales[0]
     val day = when (t.toLocalDate()) {
         today -> stringResource(R.string.today)
         today.minusDays(1) -> stringResource(R.string.yesterday)
-        else -> t.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()))
+        else -> t.format(DateTimeFormatter.ofPattern("d MMM", locale))
     }
     return stringResource(R.string.when_format, day, t.format(DateTimeFormatter.ofPattern("HH:mm")))
 }
+
+private fun shortTimeText(epochMs: Long): String = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d/M HH:mm"))

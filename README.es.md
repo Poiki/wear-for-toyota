@@ -11,7 +11,7 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 ## Qué hace
 
 - **Mi Garaje**: una tarjeta por coche de la cuenta, con la imagen oficial de Toyota.
-- **Esfera de estado**: cerrado o abierto, combustible o batería con un indicador alrededor de la pantalla, autonomía, kilometraje y cuándo informó el coche por última vez (tócalo para despertar al coche y pedir datos nuevos). Al abrir un coche se muestra un anillo de carga hasta que Toyota responde, así nunca ves datos viejos.
+- **Esfera de estado**: cerrado o abierto, combustible o batería con un indicador rojo compacto junto al coche, autonomía, kilometraje y cuándo informó el coche por última vez (tócalo para despertar al coche y pedir datos nuevos). Al abrir un coche se muestra un anillo de carga hasta que Toyota responde, así nunca ves datos viejos.
 - **Esfera de controles** (desliza a la izquierda): cerrar, abrir, climatizador y última posición aparcado (abre la app de mapas del reloj). Abrir pide confirmación en pantalla. Tras cada orden la app despierta al coche y verifica su estado real antes de decirte "Vehículo cerrado".
 - **Climatizador**: una esfera que giras con la corona o con los botones +/− (18–29 °C); encender o apagar durante 10 minutos.
 - **Autónoma**: el reloj habla con Toyota por sí mismo por Wi-Fi o LTE, o a través del Bluetooth del móvil emparejado. La app de móvil es opcional.
@@ -24,6 +24,15 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 - Una cuenta Toyota o Lexus en Europa con Connected Services y un coche con servicios remotos. Lo que MyToyota ofrezca para tu coche es lo que esta app puede hacer.
 - Un reloj con Wear OS 3 o superior (Android 11, API 30+). Probado en un OnePlus Watch 3 (Wear OS 6) y en el emulador de Wear OS 5.
 - Para compilar: JDK 17 o superior y un Android SDK con la plataforma 37 y build-tools 36. Android Studio es opcional; todo funciona desde la línea de comandos.
+
+## Instalación fácil (Windows y Mac)
+
+Descarga los instaladores de consola desde este repositorio:
+
+- **Windows:** guarda [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd) e [install.ps1](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.ps1) en la misma carpeta y abre `install.cmd` con doble clic.
+- **Mac:** guarda [install.command](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.command), ejecuta una vez `chmod +x ~/Downloads/install.command` y ábrelo en Terminal o con doble clic.
+
+Descargan ADB de Google y el APK firmado más reciente, verifican SHA-256 e instalan conservando los datos. No necesitas Android Studio, Java ni permisos de administrador. Activa la depuración y autoriza el ordenador en el reloj; para Wi-Fi el script guía el emparejamiento y la conexión. En USB, Windows puede necesitar el controlador del fabricante. [Instrucciones detalladas](docs/INSTALL.md). Los scripts permanecen en el repositorio y cada release incluye un README de instalación.
 
 ## Instala tu propia copia
 
@@ -84,6 +93,8 @@ App no oficial y autónoma para Wear OS pensada para coches Toyota y Lexus vendi
 - No está en Google Play: Play prohíbe introducir contraseñas en el reloj y una API no oficial no pasaría la revisión. Solo instalación manual.
 
 ## Desarrollo
+
+- [Guía de estilo](design.md) e [investigación de consumos para 0.3.1](docs/consumption.md). El historial está en desarrollo y no forma parte de la release de diseño 0.3.0.
 
 - `android/core`: cliente Toyota (login, refresh, lecturas, comandos) y parseo de respuestas, con tests unitarios sobre fixtures reales: `./gradlew :core:testDebugUnitTest`.
 - `android/watch` y `android/phone`: las dos apps. Compose for Wear OS Material 3; la app de móvil es una sola pantalla.

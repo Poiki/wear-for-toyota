@@ -96,6 +96,7 @@ object Store {
         selectedVin.value = vin
         cache.edit().putString("selected", vin).apply()
         snapshot.value = raw(vin)?.takeIf { System.currentTimeMillis() - it.optLong("fetchedAt") < FRESH_MS }
+            ?.apply { current()?.second?.let { put("vehicle", it) } }
             ?.let { runCatching { Snapshot.from(it) }.getOrNull() }
         climateTemp.value = null
         result.value = null
@@ -135,19 +136,21 @@ object Store {
         if (!saveCredentials(email, password.takeIf { savePassword })) error.value = app.getString(R.string.err_save_password)
     }
 
-    /** Vehicle list from the cache, or from Toyota once. The garage lists the cars only when their pictures are ready (or failed). */
+    /** Refreshes Toyota's vehicle metadata on launch; cached pictures need no second download. */
     suspend fun loadVehicles() = work(R.string.busy_vehicles) {
-        if (vehicles.value.isNotEmpty()) return@work
+        // Emulator previews have no Toyota session.
+        if (tokens?.accessToken == "demo") return@work
         val all = api.vehicles()
         val list = List(all.length()) { all.getJSONObject(it) }
         if (list.isEmpty()) throw ToyotaError(404, null, "no vehicles")
         list.forEach { v ->
             val vin = v.getString("vin")
+            Log.i("ToyotaWear", "Remote services: display=${v.optString("remoteDisplay")}, subscription=${v.optString("remoteSubscriptionStatus")}")
             if (carImages.value[vin] == null) runCatching { fetchCarImage(vin, v.optString("image")) }
         }
         cache.edit().putString("vehicles", all.toString()).apply()
         vehicles.value = list
-        if (list.none { it.optString("vin") == selectedVin.value }) select(list.first().getString("vin"))
+        select(list.firstOrNull { it.optString("vin") == selectedVin.value }?.getString("vin") ?: list.first().getString("vin"))
     }
 
     /** Reads the selected vehicle; with [wake] it first asks the car for fresh status and polls until its timestamp advances. */

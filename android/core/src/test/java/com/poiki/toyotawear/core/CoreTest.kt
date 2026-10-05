@@ -44,6 +44,22 @@ class CoreTest {
     }
 
     @Test
+    fun remoteServicesWithoutDisplayField() {
+        val vehicle = fixture("v2_vehicleguid.json").getJSONArray("payload").getJSONObject(0)
+        val raw = JSONObject().put("vehicle", vehicle)
+        vehicle.remove("remoteDisplay")
+        assertTrue(Snapshot.from(raw).remoteActive) // Active subscription, field omitted by Toyota.
+        vehicle.put("remoteSubscriptionStatus", "EXPIRED")
+        assertFalse(Snapshot.from(raw).remoteActive)
+        vehicle.remove("remoteSubscriptionStatus")
+        assertFalse(Snapshot.from(raw).remoteActive)
+        vehicle.put("remoteSubscriptionStatus", "ACTIVE").put("remoteDisplay", "9")
+        assertFalse(Snapshot.from(raw).remoteActive) // Explicit account block wins over subscription.
+        vehicle.put("remoteDisplay", JSONObject.NULL)
+        assertTrue(Snapshot.from(raw).remoteActive)
+    }
+
+    @Test
     fun snapshotWithOnlyVehicle() {
         val s = Snapshot.from(JSONObject().put("vehicle", JSONObject().put("vin", "X").put("modelName", "Yaris")))
         assertEquals("Yaris", s.alias)

@@ -64,7 +64,10 @@ data class Snapshot(
                 vin = v.getString("vin"),
                 alias = displayName(v),
                 model = v.optString("modelName"),
-                remoteActive = v.optString("remoteDisplay") == "7",
+                // Some EU responses omit remoteDisplay; use the explicit subscription status then.
+                remoteActive = v.optString("remoteDisplay").let { display ->
+                    if (display.isNotBlank()) display == "7" else v.optString("remoteSubscriptionStatus") == "ACTIVE"
+                },
                 electric = isElectric(v),
                 locked = when {
                     lockStates.isEmpty() -> null

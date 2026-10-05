@@ -11,7 +11,7 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 ## What it does
 
 - **My Garage**: one card per car on the account, with Toyota's own picture of the car.
-- **Status dial**: locked / unlocked, fuel or battery with a gauge around the screen, range, mileage, and when the car last reported (tap it to wake the car for fresh data). Opening a car shows a loading ring until Toyota answers, so you never see old data.
+- **Status dial**: locked / unlocked, fuel or battery with a compact red gauge beside the car, range, mileage, and when the car last reported (tap it to wake the car for fresh data). Opening a car shows a loading ring until Toyota answers, so you never see old data.
 - **Controls dial** (swipe left): lock, unlock, climate and the last parked position (opens the maps app on the watch). Unlocking asks for an on-screen confirmation. After every command the app wakes the car and verifies the real state before telling you "Vehicle locked".
 - **Climate**: a dial you turn with the crown or the +/- buttons (18–29 °C); start or stop for 10 minutes.
 - **Standalone**: the watch talks to Toyota on its own over Wi-Fi or LTE, or through the Bluetooth proxy of the paired phone. The phone app is optional.
@@ -24,6 +24,15 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 - A Toyota or Lexus account in Europe with Connected Services, and a car with remote services. Whatever MyToyota offers for your car is what this app can do.
 - A Wear OS 3 or newer watch (Android 11, API 30+). Tested on a OnePlus Watch 3 (Wear OS 6) and the Wear OS 5 emulator.
 - To build: JDK 17 or newer and an Android SDK with platform 37 and build-tools 36. Android Studio is optional; everything works from the command line.
+
+## Easy install (Windows and macOS)
+
+Download the console installers from this repository:
+
+- **Windows:** save [install.cmd](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.cmd) and [install.ps1](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.ps1) in the same folder, then double-click `install.cmd`.
+- **Mac:** save [install.command](https://raw.githubusercontent.com/Poiki/wear-for-toyota/main/scripts/install.command), run `chmod +x ~/Downloads/install.command` once, then open it in Terminal or double-click it.
+
+They download Google's ADB tools and the latest signed watch APK, verify SHA-256 and install without deleting app data. No Android Studio, Java or administrator access is required. You must enable debugging and authorize the computer on the watch; for Wi-Fi the script guides pairing and connection. Windows USB may require the manufacturer's driver. [Step-by-step installation](docs/INSTALL.md). The scripts stay in the repository; every release includes installation instructions.
 
 ## Install your own copy
 
@@ -84,6 +93,8 @@ Unofficial, standalone Wear OS app for Toyota and Lexus cars sold in Europe (MyT
 - Not on Google Play: Play forbids password input on the watch, and an unofficial API would not pass review. Sideload only.
 
 ## Development
+
+- [Visual style](design.md) and [trip consumption research for 0.3.1](docs/consumption.md). The history feature is in development and is not included in the 0.3.0 design release.
 
 - `android/core`: Toyota client (login, refresh, reads, commands) and payload parsing, with unit tests on real fixtures: `./gradlew :core:testDebugUnitTest`.
 - `android/watch` and `android/phone`: the two apps. Compose for Wear OS Material 3; the phone app is a single screen.

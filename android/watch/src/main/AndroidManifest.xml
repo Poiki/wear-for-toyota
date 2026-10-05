@@ -36,10 +36,12 @@
 
         <receiver android:name=".InstallReceiver" android:exported="false" />
 
-        <!-- No emoji in this app: skip EmojiCompat's startup work and font loading. -->
+        <!-- No emoji: skip font loading. Startup is supplied transitively and verified in the APK; lint misses it here. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:ignore="MissingClass"
             tools:node="merge">
             <meta-data android:name="androidx.emoji2.text.EmojiCompatInitializer" tools:node="remove" />
         </provider>

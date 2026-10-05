@@ -81,4 +81,10 @@
 
     <string name="update_title">Version %1$s available</string>
     <string name="update_text">Download and install it now?</string>
+    <string name="range_label">Range</string>
+    <string name="climate_set_hint">Set the cabin temperature</string>
+    <string name="unlock_explanation">Unlocks your vehicle and allows access to the cabin.</string>
+    <string name="temperature_down">Decrease temperature</string>
+    <string name="temperature_up">Increase temperature</string>
+    <string name="cancel">Cancel</string>
 </resources>

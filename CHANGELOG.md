@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-10-05
+
+- Black and red cockpit interface, compact fuel/battery dial beside the full car photo, metallic buttons and a matching climate dial.
+- Centered button icons and labels; complete garage photos and long vehicle names; controls and confirmation dialogs fit round screens in all six languages.
+- Active remote subscriptions remain usable when Toyota omits `remoteDisplay`. Vehicle metadata refreshes at startup instead of remaining cached indefinitely. Explicit Toyota account blocks are still respected.
+- Console installers for Windows and macOS in the repository, linked from both READMEs. They download ADB and the signed watch APK, verify SHA-256 and preserve existing app data. Every release includes an installation README.
+- Added `design.md` and trip-consumption research for the next version. Trip history is not part of this release.
+
 ## 0.2.1 — 2026-10-03
 
 - The car screen is now two dials. The status dial shows the lock state, fuel or battery with a gauge around the edge, range, mileage and the time of the last report; tap that time to wake the car. Swipe left for the controls dial: lock, unlock (confirmed), climate and the map.

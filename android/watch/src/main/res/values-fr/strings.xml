@@ -81,4 +81,10 @@
 
     <string name="update_title">Version %1$s disponible</string>
     <string name="update_text">La télécharger et l\'installer maintenant ?</string>
+    <string name="range_label">Autonomie</string>
+    <string name="climate_set_hint">Régler la température</string>
+    <string name="unlock_explanation">Déverrouille le véhicule et permet l’accès à l’habitacle.</string>
+    <string name="temperature_down">Baisser la température</string>
+    <string name="temperature_up">Augmenter la température</string>
+    <string name="cancel">Annuler</string>
 </resources>

@@ -1,10 +1,13 @@
 package com.poiki.toyotawear
 
 import android.app.KeyguardManager
+import android.app.LocaleManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
+import android.os.LocaleList
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
@@ -43,13 +46,23 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        val debug = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         super.onCreate(savedInstanceState)
+        if (debug && Build.VERSION.SDK_INT >= 33) intent.getStringExtra("locale")?.let {
+            getSystemService(LocaleManager::class.java).applicationLocales = LocaleList.forLanguageTags(it)
+        }
         Store.init(this)
         // Debug builds only: inject tokens without a phone, e.g.
         // adb shell am start -n com.poiki.toyotawear/.MainActivity --es tokens "$(cat tokens.json)"
-        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+        if (debug) {
             intent.getStringExtra("tokens")?.let { Store.saveTokens(Tokens.fromJson(it)) }
             if (intent.getBooleanExtra("demo", false)) Store.seedDemo() // adb shell am start -n …/.MainActivity --ez demo true
+            if (intent.getBooleanExtra("demo", false)) {
+                // Local UI checks: no real Toyota commands or credentials required.
+                if (intent.getBooleanExtra("climateRunning", false)) Store.snapshot.value = Store.snapshot.value?.copy(climate = "running")
+                if (intent.getBooleanExtra("doorOpen", false)) Store.snapshot.value = Store.snapshot.value?.copy(openDoors = 1)
+                intent.getStringExtra("busy")?.let { Store.busy.value = it }
+            }
             // --es result "Vehículo cerrado" [--ei resultDelayMs 8000]: fakes a command outcome ("!" prefix = failure) to preview the dialogs.
             intent.getStringExtra("result")?.let { text ->
                 lifecycleScope.launch {
@@ -58,7 +71,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        setContent { ToyotaTheme { App(onMap = ::openMap, unlockGate = ::unlockGate) } }
+        val preview = if (debug && intent.getBooleanExtra("demo", false)) intent.getStringExtra("preview") else null
+        setContent { ToyotaTheme { App(onMap = ::openMap, unlockGate = ::unlockGate, preview = preview) } }
     }
 
     private fun openMap(lat: Double, lon: Double) {
@@ -87,7 +101,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private val ToyotaRed = Color(0xFFEB0A1E)
+private val ToyotaRed = Color(0xFFFF1838)
 
 @Composable
 private fun ToyotaTheme(content: @Composable () -> Unit) = MaterialTheme(
@@ -97,6 +111,11 @@ private fun ToyotaTheme(content: @Composable () -> Unit) = MaterialTheme(
         onPrimary = Color.White,
         primaryContainer = Color(0xFF5A0A12),
         onPrimaryContainer = Color(0xFFFFDAD8),
+        background = Color.Black,
+        onBackground = Color.White,
+        surfaceContainer = Color(0xFF14161A),
+        onSurface = Color(0xFFF5F6F8),
+        onSurfaceVariant = Color(0xFFA9ADB4),
     ),
     content = content,
 )
@@ -104,7 +123,7 @@ private fun ToyotaTheme(content: @Composable () -> Unit) = MaterialTheme(
 private enum class Route { Garage, Vehicle, Climate }
 
 @Composable
-private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
+private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, preview: String? = null) {
     val linked by Store.linked.collectAsState()
     val error by Store.error.collectAsState()
     val busy by Store.busy.collectAsState()
@@ -112,11 +131,17 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
     val update by Store.update.collectAsState()
     val updating by Store.updating.collectAsState()
     val context = LocalContext.current
+    val installPermissionError = stringResource(R.string.err_install_permission)
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     var login by remember { mutableStateOf(false) }
     var offer by remember { mutableStateOf<Releases.Apk?>(null) } // outlives Store.update so the dialog can animate out
-    val stack = remember { mutableStateListOf(Route.Garage) }
+    val stack = remember {
+        mutableStateListOf(Route.Garage).apply {
+            if (preview == "vehicle" || preview == "climate") add(Route.Vehicle)
+            if (preview == "climate") add(Route.Climate)
+        }
+    }
 
     LaunchedEffect(Unit) { Store.checkUpdate() }
     LaunchedEffect(update) { update?.let { offer = it } }
@@ -136,7 +161,7 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
         login -> "login"
         else -> "link"
     }
-    AppScaffold {
+    AppScaffold(timeText = {}) {
         // One short fade between the three top-level states; nothing animates while idle.
         Crossfade(targetState = screen, animationSpec = tween(250), label = "screen") { target ->
             when (target) {
@@ -170,7 +195,7 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
                             runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))) }
                                 .onFailure {
                                     Store.update.value = null
-                                    Store.error.value = context.getString(R.string.err_install_permission)
+                                    Store.error.value = installPermissionError
                                 }
                         }
                     })
@@ -205,7 +230,6 @@ private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double
     val climateTemp by Store.climateTemp.collectAsState()
     val busy by Store.busy.collectAsState()
     val error by Store.error.collectAsState()
-    val result by Store.result.collectAsState()
     val scope = rememberCoroutineScope()
     when (route) {
         Route.Garage -> GarageScreen(
@@ -248,10 +272,10 @@ private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double
         }
         Route.Climate -> ClimateScreen(
             snapshot = snapshot,
+            car = images[selectedVin],
             temp = climateTemp ?: 21.0,
             busy = busy,
             error = error,
-            result = result,
             onTemp = Store::setClimateTemp,
             onToggle = { start -> scope.launch { Store.climate(start) } },
         )

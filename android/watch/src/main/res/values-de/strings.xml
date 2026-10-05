@@ -81,4 +81,10 @@
 
     <string name="update_title">Version %1$s verfügbar</string>
     <string name="update_text">Jetzt herunterladen und installieren?</string>
+    <string name="range_label">Reichweite</string>
+    <string name="climate_set_hint">Temperatur einstellen</string>
+    <string name="unlock_explanation">Entriegelt das Fahrzeug und ermöglicht Zugang zum Innenraum.</string>
+    <string name="temperature_down">Temperatur senken</string>
+    <string name="temperature_up">Temperatur erhöhen</string>
+    <string name="cancel">Abbrechen</string>
 </resources>
