@@ -78,11 +78,11 @@ def texts(tree):
     return [n.get('text') for n in tree.iter('node')]
 
 
-def check_trips():
+def check_trips(densities=(320, 378)):
     labels = [('en','Trips','Trip detail'), ('es','Viajes','Detalle del viaje'),
               ('de','Fahrten','Fahrtdetails'), ('fr','Trajets','Détail du trajet'),
               ('it','Viaggi','Dettaglio viaggio'), ('pt','Viagens','Detalhes da viagem')]
-    for density in (320, 378):
+    for density in densities:
         adb('shell','wm','density',density)
         for locale,title,detail in labels:
             launch('vehicle',locale)
@@ -110,6 +110,7 @@ def check_trips():
             assert '43%' not in texts(dump()), 'Closing detail must stay in history'
             adb('shell','input','keyevent','KEYCODE_BACK')
             assert '43%' in texts(dump()), 'Back from history must return to vehicle'
+            time.sleep(1)  # Vehicle entrance animation must finish before the next gesture.
             adb('shell','input','swipe',380,150,70,150,350)
             assert '43%' not in texts(dump()), 'Horizontal controls navigation must still work'
             print(f'OK trips swipe + detail + back + controls: {locale}, {density} dpi',flush=True)
