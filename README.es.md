@@ -47,6 +47,8 @@ Descarga los instaladores de consola desde este repositorio:
 
 Descargan ADB de Google y el APK firmado más reciente, verifican SHA-256 e instalan conservando los datos. No necesitas Android Studio, Java ni permisos de administrador. Activa la depuración y autoriza el ordenador en el reloj; para Wi-Fi el script guía el emparejamiento y la conexión. En USB, Windows puede necesitar el controlador del fabricante. [Instrucciones detalladas](docs/INSTALL.md). Los scripts permanecen en el repositorio y cada release incluye un README de instalación.
 
+El lanzador de Windows descarga el script como texto legible y usa `RemoteSigned` para ese proceso de PowerShell. El script aún no tiene firma Authenticode. Si el antivirus lo bloquea, detén la instalación y solicita una revisión al fabricante; [detalles y alternativa manual](docs/INSTALL.md#antivirus-y-política-de-powershell).
+
 ## Instala tu propia copia
 
 1. Clona el repositorio y compila las dos apps:

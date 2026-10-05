@@ -47,6 +47,8 @@ Download the console installers from this repository:
 
 They download Google's ADB tools and the latest signed watch APK, verify SHA-256 and install without deleting app data. No Android Studio, Java or administrator access is required. You must enable debugging and authorize the computer on the watch; for Wi-Fi the script guides pairing and connection. Windows USB may require the manufacturer's driver. [Step-by-step installation](docs/INSTALL.md). The scripts stay in the repository; every release includes installation instructions.
 
+The Windows launcher downloads readable script text and uses `RemoteSigned` for that PowerShell process. The script is not yet Authenticode-signed. If antivirus blocks it, stop installation and request a vendor review; see [details and manual installation](docs/INSTALL.md#antivirus-and-powershell-policy).
+
 ## Install your own copy
 
 1. Clone the repository and build both apps:
