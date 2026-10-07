@@ -39,13 +39,7 @@ class ToyotaApi(private val tokens: () -> Tokens) {
 
     /** Starts or stops the climate in one request. True when Toyota accepted it (some cars omit returnCode). */
     fun climate(vin: String, start: Boolean, tempC: Double, durationMin: Int, saved: JSONObject?): Boolean {
-        val body = JSONObject()
-            .put("command", if (start) "start" else "stop")
-            .put("duration", durationMin)
-            .put("temperature", JSONObject().put("unit", "C").put("value", tempC))
-            .put("saveSettings", false)
-        saved?.optJSONObject("heatingOptions")?.let { body.put("heatingOptions", it) }
-        saved?.optJSONObject("seatOptions")?.let { body.put("seatOptions", it) }
+        val body = Climate.request(start, tempC, durationMin, saved)
         val code = call("POST", ToyotaConst.CLIMATE_CONTROL, vin, body.toString()).optJSONObject("payload")?.optString("returnCode")
         return code.isNullOrEmpty() || code == "000000"
     }

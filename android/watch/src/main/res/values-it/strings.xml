@@ -115,4 +115,19 @@
     <string name="about_update_failed">Impossibile cercare aggiornamenti. Controlla la connessione e riprova.</string>
     <string name="about_clear">Cancella credenziali</string>
     <string name="about_clear_confirm">La sessione, la password salvata e i dati del veicolo saranno rimossi da questo orologio. Dovrai accedere di nuovo.</string>
+    <string name="climate_options">Opzioni clima</string>
+    <string name="climate_options_note">Applicare avvia o riavvia il clima per 10 minuti e utilizza un avvio remoto. La selezione non indica lo stato reale del veicolo.</string>
+    <string name="climate_options_empty">Toyota non segnala opzioni aggiuntive del clima compatibili con questo veicolo.</string>
+    <string name="climate_front">Sbrinamento anteriore</string>
+    <string name="climate_rear">Disappannamento posteriore</string>
+    <string name="climate_wheel">Volante riscaldato</string>
+    <string name="climate_driver">Conducente</string>
+    <string name="climate_passenger">Passeggero</string>
+    <string name="climate_rear_driver">Dietro · conducente</string>
+    <string name="climate_rear_passenger">Dietro · passeggero</string>
+    <string name="climate_heat">Riscaldamento</string>
+    <string name="climate_ventilate">Ventilazione</string>
+    <string name="climate_selected">%1$s</string>
+    <string name="climate_apply">Applica e avvia</string>
+    <string name="climate_options_hint">Tocca per cambiare la selezione.</string>
 </resources>

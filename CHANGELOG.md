@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.3 — 2026-10-07
+
+- Climate options for front/rear defogging, heated steering wheel and all four seat positions. Heating and ventilation appear only when supported by the vehicle capabilities or reported settings; explicit unsupported flags are respected.
+- Compact icon controls, short labels and smaller mode text; the start/restart explanation appears beside Apply.
+- Selections are staged locally. Apply and start sends one combined 10-minute climate start/restart; the screen explains this and does not present selections as live vehicle status. Toyota defaults are not overwritten.
+- Normalize seat read levels (low/medium/high) to the V2 write mode `heater`, preserving other recognized options and omitting unknown values. Stop sends only its command.
+- Verify reported option modes after sending. Missing option data, failed reads and missing stop status remain unconfirmed.
+- Local parser/request checks and round-screen UI checks; operation of each extra on a real vehicle still depends on Toyota and has not been tested with live commands.
+
 ## 0.3.2 — 2026-10-07
 
 - Red consumption chart for up to 12 recent dated trips, with accessible values, chronological order and gaps for missing fuel readings. Each point is a whole-trip average; zero fuel remains valid.

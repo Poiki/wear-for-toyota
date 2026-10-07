@@ -115,4 +115,19 @@
     <string name="about_update_failed">No se pudo buscar la actualización. Comprueba la conexión y vuelve a intentarlo.</string>
     <string name="about_clear">Limpiar credenciales</string>
     <string name="about_clear_confirm">Se borrarán la sesión, la contraseña guardada y los datos del coche de este reloj. Tendrás que iniciar sesión de nuevo.</string>
+    <string name="climate_options">Opciones de clima</string>
+    <string name="climate_options_note">Aplicar enciende o reinicia el climatizador durante 10 minutos y consume un arranque remoto. La selección no es el estado real del coche.</string>
+    <string name="climate_options_empty">Toyota no ha informado de extras de climatización compatibles para este coche.</string>
+    <string name="climate_front">Desempañado delantero</string>
+    <string name="climate_rear">Desempañado trasero</string>
+    <string name="climate_wheel">Volante calefactado</string>
+    <string name="climate_driver">Conductor</string>
+    <string name="climate_passenger">Acompañante</string>
+    <string name="climate_rear_driver">Detrás · conductor</string>
+    <string name="climate_rear_passenger">Detrás · acompañante</string>
+    <string name="climate_heat">Calefacción</string>
+    <string name="climate_ventilate">Ventilación</string>
+    <string name="climate_selected">%1$s</string>
+    <string name="climate_apply">Aplicar y encender</string>
+    <string name="climate_options_hint">Toca para cambiar la selección.</string>
 </resources>

@@ -78,6 +78,59 @@ def texts(tree):
     return [n.get('text') for n in tree.iter('node')]
 
 
+def check_climate_options():
+    def reveal(label):
+        for _ in range(24):
+            tree = dump()
+            try:
+                node = button(tree, label)
+            except AssertionError:
+                adb('shell', 'input', 'swipe', 227, 320, 227, 170, 300)
+                continue
+            _, top, _, bottom = map(int, re.findall(r'\d+', node.get('bounds')))
+            delta = int(227 - (top + bottom) / 2)
+            if 40 <= top and bottom <= 414:
+                return node
+            adb('shell', 'input', 'swipe', 227, 227, 227, 227 + max(-150, min(150, delta)), 300)
+        raise AssertionError(('Climate control not reachable', label, texts(dump())))
+
+    for density in (320, 378):
+        adb('shell', 'wm', 'density', density)
+        for locale in ('en', 'es', 'de', 'fr', 'it', 'pt'):
+            folder = 'values' if locale == 'en' else 'values-' + locale
+            resources = ET.parse(ROOT / 'android/watch/src/main/res' / folder / 'strings.xml').getroot()
+            def label(key):
+                return resources.find(f"string[@name='{key}']").text
+            launch('climate', locale)
+            tree = dump()
+            assert '21°C' in texts(tree)
+            assert_safe_buttons(tree)
+            screenshot(f'climate-extras-entry-{density}-{locale}')
+            tap(button(tree, label('climate_options')))
+            for key in ('climate_front', 'climate_rear', 'climate_wheel', 'climate_driver',
+                        'climate_passenger', 'climate_rear_driver', 'climate_rear_passenger'):
+                node = reveal(label(key))
+                left, top, right, bottom = map(int, re.findall(r'\d+', node.get('bounds')))
+                assert 30 <= top < bottom <= 424, ('Climate button clipped', locale, key, node.get('bounds'))
+                for child in node.iter('node'):
+                    if child.get('text'):
+                        x1,y1,x2,y2 = map(int,re.findall(r'\d+',child.get('bounds')))
+                        assert all(math.hypot(x-227,y-227) < 227 for x in (x1,x2) for y in (y1,y2)), ('Climate text outside round screen', locale, child.attrib)
+                if key == 'climate_driver':
+                    tap(node)
+                    selected = label('climate_selected').replace('%1$s', label('climate_heat'))
+                    assert selected in [c.get('text') for c in button(dump(), label(key)).iter('node')]
+                    tap(button(dump(), label(key)))
+                    selected = label('climate_selected').replace('%1$s', label('climate_ventilate'))
+                    assert selected in [c.get('text') for c in button(dump(), label(key)).iter('node')]
+                    screenshot(f'climate-extras-seats-{density}-{locale}')
+            assert reveal(label('climate_apply')).get('enabled') == 'true'
+            screenshot(f'climate-extras-apply-{density}-{locale}')
+            adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
+            assert '21°C' in texts(dump()), 'Options back must return to the temperature dial'
+            print(f'OK climate extras + seat modes + centered labels + back: {locale}, {density} dpi; no commands sent', flush=True)
+
+
 def check_trips(densities=(320, 378), locales=None):
     labels = [('en','Trips','Trip detail'), ('es','Viajes','Detalle del viaje'),
               ('de','Fahrten','Fahrtdetails'), ('fr','Trajets','Détail du trajet'),
@@ -308,6 +361,9 @@ if __name__ == '__main__':
     timeout = adb('shell', 'settings', 'get', 'system', 'screen_off_timeout').decode().strip()
     adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '600000')
     try:
+        if '--climate-options' in sys.argv:
+            check_climate_options()
+            sys.exit(0)
         if '--about' in sys.argv:
             check_about()
             sys.exit(0)

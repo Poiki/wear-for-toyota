@@ -115,4 +115,19 @@
     <string name="about_update_failed">Updates konnten nicht geprüft werden. Verbindung prüfen und erneut versuchen.</string>
     <string name="about_clear">Zugangsdaten löschen</string>
     <string name="about_clear_confirm">Sitzung, gespeichertes Passwort und Fahrzeugdaten werden von dieser Uhr gelöscht. Eine erneute Anmeldung ist nötig.</string>
+    <string name="climate_options">Klimaoptionen</string>
+    <string name="climate_options_note">Anwenden startet die Klimaanlage für 10 Minuten neu und verbraucht einen Fernstart. Die Auswahl zeigt nicht den tatsächlichen Fahrzeugstatus.</string>
+    <string name="climate_options_empty">Toyota meldet für dieses Fahrzeug keine unterstützten Klimaextras.</string>
+    <string name="climate_front">Frontscheibenheizung</string>
+    <string name="climate_rear">Heckscheibenheizung</string>
+    <string name="climate_wheel">Lenkradheizung</string>
+    <string name="climate_driver">Fahrer</string>
+    <string name="climate_passenger">Beifahrer</string>
+    <string name="climate_rear_driver">Hinten · Fahrer</string>
+    <string name="climate_rear_passenger">Hinten · Beifahrer</string>
+    <string name="climate_heat">Heizung</string>
+    <string name="climate_ventilate">Belüftung</string>
+    <string name="climate_selected">%1$s</string>
+    <string name="climate_apply">Anwenden und starten</string>
+    <string name="climate_options_hint">Antippen ändert die Auswahl.</string>
 </resources>

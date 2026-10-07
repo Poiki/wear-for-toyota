@@ -10,6 +10,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import com.poiki.toyotawear.core.Releases
+import com.poiki.toyotawear.core.Climate
 import com.poiki.toyotawear.core.Snapshot
 import com.poiki.toyotawear.core.Tokens
 import com.poiki.toyotawear.core.ToyotaApi
@@ -42,6 +43,9 @@ object Store {
     val snapshot = MutableStateFlow<Snapshot?>(null)
     val carImages = MutableStateFlow<Map<String, Bitmap>>(emptyMap())
     val climateTemp = MutableStateFlow<Double?>(null)
+    val climateChoices = MutableStateFlow<List<Climate.Choice>>(emptyList())
+    val climateLoading = MutableStateFlow(false)
+    val climateError = MutableStateFlow<String?>(null)
     val tripHistory = MutableStateFlow<TripHistory?>(null)
     val tripsLoading = MutableStateFlow(false)
     val tripsError = MutableStateFlow<String?>(null)
@@ -75,6 +79,7 @@ object Store {
     private lateinit var cache: SharedPreferences
     private val api = ToyotaApi { freshTokens() }
     private val climateSaved = mutableMapOf<String, JSONObject?>()
+    private var climateLoadedVin: String? = null
 
     // ponytail: fixed ~30 s wake schedule; tune once real cars have been measured.
     private val wakePollMs = longArrayOf(5_000, 5_000, 10_000, 10_000)
@@ -105,6 +110,10 @@ object Store {
             ?.apply { current()?.second?.let { put("vehicle", it) } }
             ?.let { runCatching { Snapshot.from(it) }.getOrNull() }
         climateTemp.value = null
+        climateChoices.value = emptyList()
+        climateLoading.value = false
+        climateError.value = null
+        climateLoadedVin = null
         tripHistory.value = null
         tripsError.value = null
         result.value = null
@@ -135,6 +144,10 @@ object Store {
         carImages.value = emptyMap()
         climateSaved.clear()
         climateTemp.value = null
+        climateChoices.value = emptyList()
+        climateLoading.value = false
+        climateError.value = null
+        climateLoadedVin = null
         tripHistory.value = null
         tripsError.value = null
         result.value = null
@@ -194,16 +207,18 @@ object Store {
     /** Starts or stops the climate at [climateTemp] for CLIMATE_MINUTES, then reads the climate status once. */
     suspend fun climate(start: Boolean) = work(R.string.busy_sending) {
         val (vin, _) = current() ?: return@work
-        val accepted = api.climate(vin, start, climateTemp.value ?: 21.0, CLIMATE_MINUTES, climateSaved[vin])
+        if (climateLoading.value || tokens?.accessToken == "demo") return@work
+        val desired = Climate.settings(climateSaved[vin], climateChoices.value)
+        val accepted = api.climate(vin, start, climateTemp.value ?: 21.0, CLIMATE_MINUTES, desired)
         if (!accepted) {
             result.value = CommandResult(System.currentTimeMillis(), app.getString(R.string.result_rejected), false)
             return@work
         }
         busy.value = app.getString(R.string.busy_verifying)
         delay(8_000)
-        optional { api.climateStatus(vin) }?.let { cl -> update(vin) { it.put("climate", cl) } }
-        val status = snapshot.value?.climate
-        val ok = if (start) status == "starting" || status == "running" else status == null || status == "stopped" || status == "stopping"
+        val status = optional { api.climateStatus(vin) }
+        status?.let { cl -> update(vin) { it.put("climate", cl) } }
+        val ok = Climate.confirmed(start, desired, status)
         result.value = CommandResult(
             System.currentTimeMillis(),
             app.getString(
@@ -219,14 +234,40 @@ object Store {
 
     /** Toyota's saved climate settings give the initial dial temperature (default 21 °C). */
     suspend fun loadClimateSettings() = withContext(Dispatchers.IO) {
-        if (climateTemp.value != null) return@withContext
-        val vin = selectedVin.value ?: return@withContext
-        val saved = optional { api.climateSettings(vin) ?: JSONObject() }
-        climateSaved[vin] = saved
-        climateTemp.value = saved?.optJSONObject("temperature")?.optDouble("value")?.takeIf { !it.isNaN() } ?: 21.0
+        val (vin, vehicle) = current() ?: return@withContext
+        if (tokens?.accessToken == "demo" || climateLoadedVin == vin || climateLoading.value) return@withContext
+        climateLoading.value = true
+        climateError.value = null
+        try {
+            val saved = api.climateSettings(vin) ?: throw ToyotaError(404, null, "no climate settings")
+            if (selectedVin.value != vin || !linked.value) return@withContext
+            // Active climate status describes the current run; saved settings only describe defaults.
+            val status = raw(vin)?.optJSONObject("climate")
+            val current = Climate.settings(saved, Climate.Option.entries.mapNotNull { option ->
+                Climate.value(status, option)?.let { Climate.Choice(option, emptyList(), it) }
+            })
+            climateSaved[vin] = current
+            climateChoices.value = Climate.choices(vehicle, current)
+            val temperature = saved.optJSONObject("temperature")
+            val value = temperature?.optDouble("value")?.takeIf { it.isFinite() } ?: 21.0
+            setClimateTemp(if (temperature?.optString("unit") == "F") (value - 32) * 5 / 9 else value)
+            climateLoadedVin = vin
+        } catch (e: Exception) {
+            if (selectedVin.value == vin && linked.value) climateError.value = humanize(e)
+        } finally {
+            if (selectedVin.value == vin) climateLoading.value = false
+        }
+    }
+
+    fun cycleClimateOption(option: Climate.Option) {
+        if (busy.value != null || climateLoading.value) return
+        climateChoices.value = climateChoices.value.map { choice ->
+            if (choice.option != option) choice else choice.copy(value = choice.modes[(choice.modes.indexOf(choice.value) + 1) % choice.modes.size])
+        }
     }
 
     fun setClimateTemp(value: Double) {
+        if (!value.isFinite()) return
         climateTemp.value = (Math.round(value / TEMP_STEP) * TEMP_STEP).coerceIn(TEMP_MIN, TEMP_MAX)
     }
 
@@ -263,6 +304,12 @@ object Store {
         store("DEMO", raw)
         select("DEMO")
         climateTemp.value = 21.0
+        vehicle.put("extendedCapabilities", JSONObject().apply { Climate.Option.entries.forEach { put(it.capability, true); it.ventilation?.let { key -> put(key, true) } } })
+        val demoSettings = JSONObject().put("heatingOptions", JSONObject().put("frontDefroster", "off").put("rearDefogger", "off").put("steeringHeater", "off"))
+            .put("seatOptions", JSONObject().put("driverSeat", "off").put("passengerSeat", "off").put("rearDriverSeat", "off").put("rearPassengerSeat", "off"))
+        climateSaved["DEMO"] = demoSettings
+        climateChoices.value = Climate.choices(vehicle, demoSettings)
+        climateLoadedVin = "DEMO"
         tokens = Tokens("demo", "demo", Long.MAX_VALUE, "demo", "T") // in memory only; real calls fail with 401
         tripHistory.value = TripHistory.from(JSONObject("""{"trips":[
             {"id":"1","summary":{"startTs":"2026-10-05T08:24:00Z","length":18400,"duration":1320,"fuelConsumption":956.8},"hdc":{"evDistance":3864},"scores":{"global":82}},

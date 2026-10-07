@@ -14,6 +14,37 @@ class CoreTest {
     private fun fixture(name: String) = JSONObject(javaClass.getResource("/$name")!!.readText())
 
     @Test
+    fun climateModesCapabilitiesAndConfirmation() {
+        val saved = JSONObject("""{"heatingOptions":{"steeringHeater":true,"rearDefogger":"unknown"},"seatOptions":{"driverSeat":"high","passengerSeat":"off","rearDriverSeat":"unexpected"}}""")
+        val caps = JSONObject("""{"frontPassengerSeatHeater":false,"frontPassengerSeatVentilation":true,"rearDefogger":false}""")
+        val choices = Climate.choices(JSONObject().put("extendedCapabilities", caps), saved)
+        assertEquals(listOf(Climate.Option.Wheel, Climate.Option.Driver, Climate.Option.Passenger), choices.map { it.option })
+        assertEquals(listOf("off", "heater"), choices[1].modes)
+        assertEquals(listOf("off", "ventilation"), choices[2].modes)
+        assertTrue(Climate.choices(JSONObject(), JSONObject()).isEmpty())
+        assertEquals(listOf("off", "ventilation"), Climate.choices(JSONObject(), JSONObject("""{"seatOptions":{"driverSeat":"ventilation"}}""")).single().modes)
+        val desired = Climate.settings(saved, listOf(choices[2].copy(value = "ventilation")))
+        val request = Climate.request(true, 21.5, 10, desired)
+        assertEquals("heater", request.getJSONObject("seatOptions").getString("driverSeat"))
+        assertEquals("ventilation", request.getJSONObject("seatOptions").getString("passengerSeat"))
+        assertFalse(request.getJSONObject("seatOptions").has("rearDriverSeat"))
+        assertEquals("on", request.getJSONObject("heatingOptions").getString("steeringHeater"))
+        assertFalse(request.getJSONObject("heatingOptions").has("rearDefogger"))
+        assertFalse(request.getBoolean("saveSettings"))
+        assertEquals("off", saved.getJSONObject("seatOptions").getString("passengerSeat"))
+        assertEquals(1, Climate.request(false, 21.0, 10, desired).length())
+        assertFalse(Climate.confirmed(false, desired, null))
+        assertTrue(Climate.confirmed(false, desired, JSONObject().put("status", "stopped")))
+        assertFalse(Climate.confirmed(true, desired, JSONObject().put("status", "running")))
+        val reported = JSONObject(desired.toString()).put("status", "running")
+        reported.getJSONObject("seatOptions").put("driverSeat", "low")
+        assertTrue(Climate.confirmed(true, desired, reported))
+        reported.getJSONObject("seatOptions").put("passengerSeat", "off")
+        assertFalse(Climate.confirmed(true, desired, reported))
+        assertTrue(runCatching { Climate.request(true, Double.NaN, 10, desired) }.isFailure)
+    }
+
+    @Test
     fun snapshotFromFixtures() {
         val raw = JSONObject()
             .put("vehicle", fixture("v2_vehicleguid.json").getJSONArray("payload").getJSONObject(0))

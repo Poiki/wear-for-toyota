@@ -115,4 +115,19 @@
     <string name="about_update_failed">Não foi possível procurar atualizações. Verifica a ligação e tenta novamente.</string>
     <string name="about_clear">Limpar credenciais</string>
     <string name="about_clear_confirm">A sessão, a palavra-passe guardada e os dados do veículo serão apagados deste relógio. Terás de iniciar sessão novamente.</string>
+    <string name="climate_options">Opções de climatização</string>
+    <string name="climate_options_note">Aplicar liga ou reinicia a climatização durante 10 minutos e utiliza um arranque remoto. A seleção não indica o estado real do veículo.</string>
+    <string name="climate_options_empty">A Toyota não indica extras de climatização compatíveis com este veículo.</string>
+    <string name="climate_front">Desembaciamento dianteiro</string>
+    <string name="climate_rear">Desembaciamento traseiro</string>
+    <string name="climate_wheel">Volante aquecido</string>
+    <string name="climate_driver">Condutor</string>
+    <string name="climate_passenger">Passageiro</string>
+    <string name="climate_rear_driver">Atrás · condutor</string>
+    <string name="climate_rear_passenger">Atrás · passageiro</string>
+    <string name="climate_heat">Aquecimento</string>
+    <string name="climate_ventilate">Ventilação</string>
+    <string name="climate_selected">%1$s</string>
+    <string name="climate_apply">Aplicar e ligar</string>
+    <string name="climate_options_hint">Toque para mudar a seleção.</string>
 </resources>

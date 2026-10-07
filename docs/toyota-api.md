@@ -111,6 +111,14 @@ Orden de `vehicle.update()` en pytoyoda: location → health → electric → te
 4. El gateway puede aceptar un comando y el coche ignorarlo si `remoteDisplay ≠ 7 (ACTIVATED)` ([ha_toyota const.py](https://raw.githubusercontent.com/pytoyoda/ha_toyota/main/custom_components/toyota/const.py)).
 5. Cuota de clima: máximo 2 arranques o 20 min acumulados entre dos ciclos de contacto ([ha_toyota README](https://raw.githubusercontent.com/pytoyoda/ha_toyota/main/README.md)); Toyota ES: 10 min, renovable dos veces.
 
+### 5.3 Extras del climatizador en Wear for Toyota 0.3.3
+
+La app lee los ajustes y las capacidades por vehículo: `frontDefogger`, `rearDefogger`, `steeringHeater` y las capacidades individuales de calefacción/ventilación de los cuatro asientos. Un campo reconocido en los ajustes también permite mostrar la función, pero una capacidad explícitamente falsa tiene prioridad. Un campo ausente no se interpreta como apagado: aparece como desconocido si hay una capacidad positiva.
+
+Las selecciones permanecen en memoria hasta pulsar «Aplicar y encender». No hay una escritura conocida de estos ajustes independiente del arranque: la app envía un único `start` con temperatura, duración y opciones reconocidas, dejando `saveSettings=false`. Los niveles leídos `low/medium/high` se convierten a `heater`; no se ofrecen intensidades que la escritura no distingue. Véase la implementación mantenida de [climate.py](https://raw.githubusercontent.com/pytoyoda/ha_toyota/main/custom_components/toyota/climate.py) y sus [selectores](https://raw.githubusercontent.com/pytoyoda/ha_toyota/main/custom_components/toyota/select.py).
+
+Una lectura posterior debe devolver un estado activo y los modos enviados para confirmar el arranque con extras; si falta algún modo, queda sin confirmar. Apagar requiere una lectura `stopped`/`stopping`, no una respuesta ausente. Las pruebas cubren el cuerpo, el filtrado y la interfaz; no se han ejecutado estos extras sobre un coche real. Cortina eléctrica, ventanas, bocina y luces no se añaden en esta versión.
+
 ---
 
 ## 6. Refresh / wake y rate limits

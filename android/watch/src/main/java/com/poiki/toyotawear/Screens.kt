@@ -42,6 +42,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -101,7 +102,10 @@ import androidx.wear.compose.material3.OutlinedButton
 import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
+import androidx.wear.compose.material3.TextButton
+import kotlinx.coroutines.launch
 import com.poiki.toyotawear.core.Snapshot
+import com.poiki.toyotawear.core.Climate
 import org.json.JSONObject
 import java.text.NumberFormat
 import java.time.Instant
@@ -428,6 +432,8 @@ fun ClimateScreen(
     onTemp: (Double) -> Unit, onToggle: (Boolean) -> Unit,
 ) {
     val running = snapshot?.climate == "running" || snapshot?.climate == "starting"
+    val loading by Store.climateLoading.collectAsState()
+    var options by remember { mutableStateOf(false) }
     val lowerTemperature = stringResource(R.string.temperature_down)
     val higherTemperature = stringResource(R.string.temperature_up)
     val haptic = LocalHapticFeedback.current
@@ -456,8 +462,10 @@ fun ClimateScreen(
             }.focusRequester(focus).focusable()) {
             Column(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 BrandHeader()
-                Text(stringResource(R.string.climate), fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
-                Text(stringResource(if (running) R.string.climate_on else R.string.climate_set_hint), fontSize = 9.sp, lineHeight = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { options = true }, enabled = busy == null,
+                    modifier = Modifier.width(152.dp).height(36.dp)) {
+                    FitText(stringResource(R.string.climate_options), TextStyle(fontSize = 12.sp), NeonRed, Modifier.fillMaxWidth())
+                }
             }
             NeonGauge({ arc.value }, Modifier.size(106.dp).align(Alignment.TopCenter).offset(y = 68.dp), ticks = true) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -478,7 +486,7 @@ fun ClimateScreen(
                 Icon(painterResource(R.drawable.ic_fan), contentDescription = null, modifier = Modifier.size(12.dp), tint = if (running) NeonRed else Color(0xFFADB1B8))
                 Text(stringResource(if (running) R.string.climate_on else R.string.climate_off), fontSize = 9.sp, lineHeight = 11.sp, modifier = Modifier.padding(start = 4.dp))
             }
-            Button(onClick = { onToggle(!running) }, enabled = busy == null && snapshot?.remoteActive == true,
+            Button(onClick = { onToggle(!running) }, enabled = busy == null && !loading && snapshot?.remoteActive == true,
                 contentPadding = PaddingValues(horizontal = 10.dp),
                 modifier = Modifier.size(132.dp, 40.dp).align(Alignment.TopCenter).offset(y = 171.dp).neonSurface(active = true),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent)) {
@@ -490,8 +498,87 @@ fun ClimateScreen(
             if (busy != null) WaitFace(car, busy, working = true)
         }
     }
+    Dialog(visible = options, onDismissRequest = { options = false }) {
+        ClimateOptionsScreen(canApply = snapshot?.remoteActive == true && busy == null,
+            onApply = { options = false; onToggle(true) })
+    }
     ErrorNotice(error) { Store.error.value = null }
 }
+
+@Composable
+private fun ClimateOptionsScreen(canApply: Boolean, onApply: () -> Unit) {
+    val choices by Store.climateChoices.collectAsState()
+    val loading by Store.climateLoading.collectAsState()
+    val error by Store.climateError.collectAsState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val state = rememberTransformingLazyColumnState()
+    Box(Modifier.fillMaxSize().cockpit()) {
+        ScreenScaffold(scrollState = state) { padding ->
+            TransformingLazyColumn(state = state, contentPadding = padding, modifier = Modifier.padding(horizontal = 24.dp)) {
+                item { ListHeader { ClimateText(stringResource(R.string.climate_options)) } }
+                item { ClimateText(stringResource(R.string.climate_options_hint)) }
+                if (loading) item { ClimateText(stringResource(R.string.loading)) }
+                error?.let { message ->
+                    item { ClimateText(message) }
+                    item { Button(onClick = { scope.launch { Store.loadClimateSettings() } }, enabled = !loading,
+                        modifier = Modifier.fillMaxWidth()) { ClimateText(stringResource(R.string.retry)) } }
+                }
+                if (!loading && error == null && choices.isEmpty()) item { ClimateText(stringResource(R.string.climate_options_empty)) }
+                choices.forEach { choice ->
+                    item {
+                        Button(onClick = { Store.cycleClimateOption(choice.option) }, enabled = canApply && !loading,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).neonSurface(active = choice.value != null && choice.value != "off"),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                                Icon(painterResource(when (choice.option) {
+                                    Climate.Option.Front -> R.drawable.ic_front_defrost
+                                    Climate.Option.Rear -> R.drawable.ic_rear_defrost
+                                    Climate.Option.Wheel -> R.drawable.ic_heated_wheel
+                                    else -> if (choice.value == "ventilation") R.drawable.ic_fan else R.drawable.ic_seat
+                                }), contentDescription = null, tint = if (choice.value != null && choice.value != "off") Color.White else NeonRed,
+                                    modifier = Modifier.size(22.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.width(110.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(stringResource(when (choice.option) {
+                                        Climate.Option.Front -> R.string.climate_front
+                                        Climate.Option.Rear -> R.string.climate_rear
+                                        Climate.Option.Wheel -> R.string.climate_wheel
+                                        Climate.Option.Driver -> R.string.climate_driver
+                                        Climate.Option.Passenger -> R.string.climate_passenger
+                                        Climate.Option.RearDriver -> R.string.climate_rear_driver
+                                        Climate.Option.RearPassenger -> R.string.climate_rear_passenger
+                                    }), fontSize = 10.sp, lineHeight = 12.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
+                                    Text(stringResource(R.string.climate_selected, stringResource(when (choice.value) {
+                                        "on" -> R.string.climate_on
+                                        "off" -> R.string.climate_off
+                                        "heater" -> R.string.climate_heat
+                                        "ventilation" -> R.string.climate_ventilate
+                                        else -> R.string.lock_unknown
+                                    })), fontSize = 9.sp, lineHeight = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+                if (choices.isNotEmpty()) {
+                    item { ClimateText(stringResource(R.string.climate_options_note)) }
+                    item {
+                        Button(onClick = onApply, enabled = canApply && !loading,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+                            ClimateText(stringResource(R.string.climate_apply))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClimateText(value: String) = Text(value, fontSize = 10.sp, lineHeight = 13.sp,
+    textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp))
 
 private const val ROTARY_STEP_PX = 48f
 

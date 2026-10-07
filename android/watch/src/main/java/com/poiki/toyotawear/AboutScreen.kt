@@ -21,8 +21,9 @@ fun AboutScreen(onClear: () -> Unit) {
     val status by Store.updateStatus.collectAsState()
     val busy by Store.busy.collectAsState()
     val loadingTrips by Store.tripsLoading.collectAsState()
+    val loadingClimate by Store.climateLoading.collectAsState()
     val updating by Store.updating.collectAsState()
-    val canClear = busy == null && !loadingTrips && !updating
+    val canClear = busy == null && !loadingTrips && !loadingClimate && !updating
     var confirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val state = rememberTransformingLazyColumnState()

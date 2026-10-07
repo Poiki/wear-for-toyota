@@ -289,21 +289,23 @@ private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double
                 onClimate = {
                     Store.result.value = null
                     stack.add(Route.Climate)
-                    scope.launch { Store.loadClimateSettings() }
                 },
                 onMap = onMap,
                 onTrips = { stack.add(Route.Trips) },
             )
         }
-        Route.Climate -> ClimateScreen(
-            snapshot = snapshot,
-            car = images[selectedVin],
-            temp = climateTemp ?: 21.0,
-            busy = busy,
-            error = error,
-            onTemp = Store::setClimateTemp,
-            onToggle = { start -> scope.launch { Store.climate(start) } },
-        )
+        Route.Climate -> {
+            LaunchedEffect(selectedVin) { Store.loadClimateSettings() }
+            ClimateScreen(
+                snapshot = snapshot,
+                car = images[selectedVin],
+                temp = climateTemp ?: 21.0,
+                busy = busy,
+                error = error,
+                onTemp = Store::setClimateTemp,
+                onToggle = { start -> scope.launch { Store.climate(start) } },
+            )
+        }
         Route.Trips -> {
             val history by Store.tripHistory.collectAsState()
             val loading by Store.tripsLoading.collectAsState()

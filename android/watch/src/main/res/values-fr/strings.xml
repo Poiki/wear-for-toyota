@@ -115,4 +115,19 @@
     <string name="about_update_failed">Impossible de rechercher une mise à jour. Vérifiez la connexion et réessayez.</string>
     <string name="about_clear">Effacer les identifiants</string>
     <string name="about_clear_confirm">La session, le mot de passe enregistré et les données du véhicule seront effacés de cette montre. Vous devrez vous reconnecter.</string>
+    <string name="climate_options">Options de climatisation</string>
+    <string name="climate_options_note">Appliquer démarre ou redémarre la climatisation pour 10 minutes et utilise un démarrage à distance. La sélection ne décrit pas l’état réel du véhicule.</string>
+    <string name="climate_options_empty">Toyota ne signale aucune option de climatisation compatible pour ce véhicule.</string>
+    <string name="climate_front">Dégivrage avant</string>
+    <string name="climate_rear">Désembuage arrière</string>
+    <string name="climate_wheel">Volant chauffant</string>
+    <string name="climate_driver">Conducteur</string>
+    <string name="climate_passenger">Passager</string>
+    <string name="climate_rear_driver">Arrière · conducteur</string>
+    <string name="climate_rear_passenger">Arrière · passager</string>
+    <string name="climate_heat">Chauffage</string>
+    <string name="climate_ventilate">Ventilation</string>
+    <string name="climate_selected">%1$s</string>
+    <string name="climate_apply">Appliquer et démarrer</string>
+    <string name="climate_options_hint">Touchez pour changer la sélection.</string>
 </resources>

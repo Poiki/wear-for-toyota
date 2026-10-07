@@ -115,4 +115,19 @@
     <string name="about_update_failed">Could not check for updates. Check your connection and try again.</string>
     <string name="about_clear">Clear credentials</string>
     <string name="about_clear_confirm">This removes the session, saved password and vehicle data from this watch. You will need to sign in again.</string>
+    <string name="climate_options">Climate options</string>
+    <string name="climate_options_note">Apply starts or restarts climate for 10 minutes and uses a remote start. Selections are not live vehicle status.</string>
+    <string name="climate_options_empty">Toyota has not reported supported climate extras for this vehicle.</string>
+    <string name="climate_front">Front defroster</string>
+    <string name="climate_rear">Rear defogger</string>
+    <string name="climate_wheel">Heated steering wheel</string>
+    <string name="climate_driver">Driver</string>
+    <string name="climate_passenger">Passenger</string>
+    <string name="climate_rear_driver">Rear · driver</string>
+    <string name="climate_rear_passenger">Rear · passenger</string>
+    <string name="climate_heat">Heating</string>
+    <string name="climate_ventilate">Ventilation</string>
+    <string name="climate_selected">%1$s</string>
+    <string name="climate_apply">Apply and start</string>
+    <string name="climate_options_hint">Tap to change a selection.</string>
 </resources>
