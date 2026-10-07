@@ -26,9 +26,10 @@ Wear OS emulator screenshots with demonstration data. Scroll the trip list and d
 - **Status dial**: locked / unlocked, fuel or battery with a compact red gauge beside the car, range, mileage, and when the car last reported (tap it to wake the car for fresh data). Opening a car shows a loading ring until Toyota answers, so you never see old data.
 - **Controls dial** (swipe left): lock, unlock, climate and the last parked position (opens the maps app on the watch). Unlocking asks for an on-screen confirmation. After every command the app wakes the car and verifies the real state before telling you "Vehicle locked".
 - **Climate**: a dial you turn with the crown or the +/- buttons (18–29 °C); start or stop for 10 minutes.
-- **Trips and consumption** (swipe up or tap the car photo): up to 50 trips from the last 30 days, a distance-weighted fuel average and trip details. Distance, duration, fuel and average speed are shown; electric-distance share and Toyota score appear only when supplied. Coverage is explicit and missing values remain unknown.
+- **Trips and consumption** (swipe up or tap the car photo): up to 50 trips from the last 30 days, a distance-weighted fuel average and trip details. Distance, duration, fuel and average speed are shown; electric-distance share and Toyota score appear only when supplied. Coverage is explicit and missing values remain unknown. Includes a chart of up to 12 dated trips and an electric-distance bar when data is supplied.
 - **Standalone**: the watch talks to Toyota on its own over Wi-Fi or LTE, or through the Bluetooth proxy of the paired phone. The phone app is optional.
 - **Stays signed in**: Toyota's refresh token keeps the session alive. Optionally, save your password at sign-in (off by default, encrypted under its own key) and the watch signs in again by itself if Toyota ever ends the session.
+- **About app** (garage or sign-in screen): installed version, manual update check and confirmed removal of the session, saved password and vehicle data. Manual checks bypass the daily interval.
 - **Updates itself**: at most once a day, when you open it, the watch looks for a new release on GitHub and offers to install it.
 - **Battery-friendly by design**: no background polling, no services, one small encrypted state file. The car is only woken when you ask.
 
@@ -107,6 +108,10 @@ The Windows launcher downloads readable script text and uses `RemoteSigned` for 
 - Remote commands depend on your car and subscription. Climate runs for 10 minutes and Toyota caps the number of starts per ignition cycle.
 - Trip history depends on the data Toyota supplies for your account and vehicle. It reads one page of up to 50 trips; the average covers trips with valid data, not necessarily the full month. A live trip response for the development account has not yet been confirmed. Full-month comparisons and instantaneous consumption graphs are not included.
 - Not on Google Play: Play forbids password input on the watch, and an unofficial API would not pass review. Sideload only.
+
+## How average consumption is calculated
+
+Each trip uses `100 × litres / kilometres`. The history average is `100 × total litres / total kilometres`, equivalent to weighting each trip rate by its distance. For example, 10 km at 10 L/100 km and 90 km at 5 L/100 km yield 5.5 L/100 km. Only trips with fuel and valid distance are included; zero fuel counts, missing data does not. The average covers the displayed sample.
 
 ## Development
 

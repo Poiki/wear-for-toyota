@@ -41,6 +41,10 @@ Mostrar el periodo y el número de viajes que fundamentan cada media. Una media 
 
 El detalle puede dibujar tendencias entre viajes o días reales. No dibujar consumo instantáneo por kilómetro cuando solo hay un total por viaje. No inventar nombres como «Casa → Oficina», puntuaciones, porcentajes EV, comparativas ni consejos. Mostrar «—» o explicar qué dato no está disponible; cero es un valor válido.
 
+El historial dibuja hasta 12 viajes recientes con fecha, de antiguo a nuevo, con puntos rojos, segmentos rectos y relleno rojo tenue. Cada punto representa el consumo medio de un viaje, no una muestra instantánea ni un intervalo de tiempo constante. El eje vertical parte de cero; los datos ausentes dejan huecos y nunca se conectan. Un único viaje muestra un punto y cero combustible se dibuja en la base. Las fechas y la cobertura permanecen visibles y los valores tienen descripción accesible. El detalle muestra una barra de distancia eléctrica cuando Toyota devuelve el porcentaje; no estima energía ni autonomía.
+
 ## Comprobación
+
+«Información» mantiene fondo cockpit, textos centrados y botones que crecen si la traducción necesita más líneas. Muestra versión y compilación, búsqueda manual con progreso/resultado y limpieza de credenciales con confirmación. Está disponible desde el garaje, incluso sin coches cargados, y antes de iniciar sesión. El borrado elimina sesión, contraseña guardada y caché del vehículo de este reloj; no se ofrece durante una operación del coche.
 
 `android/check_frontend.py --labels` revisa textos y controles; `--status` comprueba además que el aviso de puerta abierta no tape combustible. El historial necesita comprobar gesto vertical/horizontal, volver, carga/error/vacío, datos incompletos, unidades y medias ponderadas. Las pruebas de interfaz usan exclusivamente el emulador; la revisión física nunca activa una orden remota para comprobar el diseño.

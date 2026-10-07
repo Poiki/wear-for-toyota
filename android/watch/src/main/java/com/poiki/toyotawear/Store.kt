@@ -53,6 +53,8 @@ object Store {
     val update = MutableStateFlow<Releases.Apk?>(null)
     /** The update APK is downloading. */
     val updating = MutableStateFlow(false)
+    val updateChecking = MutableStateFlow(false)
+    val updateStatus = MutableStateFlow<String?>(null)
 
     const val TEMP_MIN = 18.0
     const val TEMP_MAX = 29.0
@@ -131,6 +133,7 @@ object Store {
         selectedVin.value = null
         snapshot.value = null
         carImages.value = emptyMap()
+        climateSaved.clear()
         climateTemp.value = null
         tripHistory.value = null
         tripsError.value = null
@@ -264,7 +267,10 @@ object Store {
         tripHistory.value = TripHistory.from(JSONObject("""{"trips":[
             {"id":"1","summary":{"startTs":"2026-10-05T08:24:00Z","length":18400,"duration":1320,"fuelConsumption":956.8},"hdc":{"evDistance":3864},"scores":{"global":82}},
             {"id":"2","summary":{"startTs":"2026-10-04T10:24:00Z","length":36700,"duration":2520,"fuelConsumption":2165.3}},
-            {"id":"3","summary":{"startTs":"2026-10-03T11:10:00Z","length":12100,"duration":900}}
+            {"id":"3","summary":{"startTs":"2026-10-03T11:10:00Z","length":12100,"duration":900}},
+            {"id":"4","summary":{"startTs":"2026-10-02T09:20:00Z","length":30000,"duration":1800,"fuelConsumption":1830}},
+            {"id":"5","summary":{"startTs":"2026-10-01T14:10:00Z","length":20000,"duration":1600,"fuelConsumption":940}},
+            {"id":"6","summary":{"startTs":"2026-09-30T16:30:00Z","length":25000,"duration":1800,"fuelConsumption":1375}}
         ],"_metadata":{"pagination":{"totalCount":12}}}"""))
         linked.value = true
     }
@@ -385,14 +391,23 @@ object Store {
         }
     }
 
-    /** At most once a day, counted from the last answer GitHub gave: one small request, silent when offline. */
-    suspend fun checkUpdate() = withContext(Dispatchers.IO) {
+    /** Automatic checks wait a day after GitHub replies; manual checks bypass that interval and report errors. */
+    suspend fun checkUpdate(force: Boolean = false) = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        if (now - cache.getLong("updateCheckedAt", 0) < UPDATE_CHECK_MS) return@withContext
-        val current = app.packageManager.getPackageInfo(app.packageName, 0).versionName ?: return@withContext
-        runCatching { Releases.newer(current, WATCH_APK) }.onSuccess {
+        if (!force && now - cache.getLong("updateCheckedAt", 0) < UPDATE_CHECK_MS) return@withContext
+        if (!updateChecking.compareAndSet(false, true)) return@withContext
+        if (force) updateStatus.value = null
+        try {
+            val current = app.packageManager.getPackageInfo(app.packageName, 0).versionName ?: return@withContext
+            val newer = Releases.newer(current, WATCH_APK)
             cache.edit().putLong("updateCheckedAt", now).apply()
-            update.value = it
+            update.value = newer
+            updateStatus.value = if (newer == null) app.getString(R.string.about_up_to_date)
+                else app.getString(R.string.update_title, newer.version)
+        } catch (_: Exception) {
+            if (force) updateStatus.value = app.getString(R.string.about_update_failed)
+        } finally {
+            updateChecking.value = false
         }
     }
 

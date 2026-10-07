@@ -8,6 +8,8 @@ probe/out/
 .env*
 *token*
 *credential*
+!android/core/src/main/java/com/poiki/toyotawear/core/Tokens.kt
+!android/watch/src/main/java/com/poiki/toyotawear/TokenListenerService.kt
 *.pytoyoda*
 cache*.json
 

@@ -14,6 +14,8 @@ data class Trip(
 
 data class TripHistory(val trips: List<Trip>, val total: Int?) {
     val measured = trips.filter { it.consumption != null }
+    // Missing consumption keeps its place as a gap; trips without a date cannot be positioned.
+    val chartTrips: List<Trip> get() = trips.filter { it.startedAt != null }.sortedBy { it.startedAt }.takeLast(12)
     val averageConsumption: Double? get() = measured.takeIf { it.isNotEmpty() }?.let { data ->
         100 * data.sumOf { it.fuelLitres!! } / data.sumOf { it.distanceKm!! }
     }

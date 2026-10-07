@@ -73,6 +73,10 @@ class CoreTest {
         assertEquals(70, h.total)
         assertEquals(5, h.trips.size)
         assertEquals(3, h.measured.size)
+        val fuelOnly = TripHistory(h.trips.filter { it.id == "short" || it.id == "long" }, null)
+        assertEquals(10.0, fuelOnly.trips.first { it.id == "short" }.consumption!!, 0.001)
+        assertEquals(5.0, fuelOnly.trips.first { it.id == "long" }.consumption!!, 0.001)
+        assertEquals(5.5, fuelOnly.averageConsumption!!, 0.001) // (10*10 + 5*90) / 100, not 7.5.
         assertEquals(5.0, h.averageConsumption!!, 0.001) // 5.5 L / 110 km, not average of rates.
         assertEquals(115.0, h.distanceKm!!, 0.001)
         assertEquals("long", h.trips.first().id)
@@ -82,6 +86,20 @@ class CoreTest {
         assertNull(h.trips.first { it.id == "missing" }.consumption)
         assertNull(h.trips.first { it.id == "idle" }.consumption)
         assertNull(TripHistory.from(JSONObject()).averageConsumption)
+    }
+
+    @Test
+    fun chartKeepsRecentChronologyAndMissingConsumption() {
+        val trips = (15 downTo 1).map { index ->
+            Trip(index.toString(), index.toLong(), 10.0, null, if (index == 10) null else 0.0, null, null)
+        } + Trip("undated", null, 10.0, null, 1.0, null, null)
+        val chart = TripHistory(trips, 40).chartTrips
+        assertEquals((4..15).map { it.toString() }, chart.map { it.id })
+        assertNull(chart.first { it.id == "10" }.consumption)
+        assertEquals(0.0, chart.last().consumption!!, 0.0)
+        assertEquals(1, TripHistory(listOf(trips.first()), null).chartTrips.size)
+        assertTrue(TripHistory(listOf(trips.last()), null).chartTrips.isEmpty())
+        assertTrue(TripHistory(emptyList(), null).chartTrips.isEmpty())
     }
 
     @Test

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.2 — 2026-10-07
+
+- Red consumption chart for up to 12 recent dated trips, with accessible values, chronological order and gaps for missing fuel readings. Each point is a whole-trip average; zero fuel remains valid.
+- Electric-distance bar in trip details when Toyota provides hybrid data. Both charts use existing trip reads and preserve the cockpit style.
+- Fixed gesture competition between vehicle paging and swipe-to-dismiss. Swipe from the left edge to return to the garage; horizontal paging and upward trip navigation remain available.
+- Documented Huawei Watch Fit 4 Pro port constraints and Toyota API features not yet shown on the watch.
+- About app screen, available from the garage and before sign-in: version/build, manual update check with progress and connection feedback, and confirmed clearing of the watch session, saved password and vehicle data.
+- Manual update checks bypass the daily automatic-check interval and reuse the existing signed-APK installation flow.
+- Verified the distance-weighted fuel average with unequal trips: 10 km at 10 L/100 km and 90 km at 5 L/100 km produce 5.5 L/100 km. Zero fuel and missing readings retain their existing treatment.
+- Included token model/listener source files previously hidden by an overly broad credential ignore rule, so fresh checkouts contain the required code.
+
 ## 0.3.1 — 2026-10-05
 
 - Swipe up or tap the car photo to open recent trips; existing horizontal controls navigation remains available.

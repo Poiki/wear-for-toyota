@@ -3,7 +3,6 @@
     <string name="app_name">Wear for Toyota</string>
 
     <string name="garage_title">My Garage</string>
-    <string name="unlink">Unlink</string>
 
     <string name="link_hint">Link the watch from the phone app, or sign in here</string>
     <string name="login_here">Sign in here</string>
@@ -103,4 +102,17 @@
     <string name="trips_score">Toyota score</string>
     <string name="trips_back">Back</string>
     <string name="trips_coverage_unknown">%1$d trips shown</string>
+    <string name="trips_trend">Consumption by trip</string>
+    <string name="trips_chart_count">Trips with dates: %1$d</string>
+    <string name="trips_chart_hint">One point per trip</string>
+    <string name="trips_chart_missing">Gaps: no fuel data</string>
+    <string name="about_title">About app</string>
+    <string name="about_version">Version %1$s · build %2$d</string>
+    <string name="about_description">Unofficial Wear OS app for Toyota and Lexus vehicles in Europe.</string>
+    <string name="about_check_updates">Check for updates</string>
+    <string name="about_checking">Checking…</string>
+    <string name="about_up_to_date">The app is up to date.</string>
+    <string name="about_update_failed">Could not check for updates. Check your connection and try again.</string>
+    <string name="about_clear">Clear credentials</string>
+    <string name="about_clear_confirm">This removes the session, saved password and vehicle data from this watch. You will need to sign in again.</string>
 </resources>

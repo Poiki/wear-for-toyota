@@ -26,9 +26,10 @@ Capturas del emulador Wear OS con datos de demostración. Desplaza la lista de v
 - **Esfera de estado**: cerrado o abierto, combustible o batería con un indicador rojo compacto junto al coche, autonomía, kilometraje y cuándo informó el coche por última vez (tócalo para despertar al coche y pedir datos nuevos). Al abrir un coche se muestra un anillo de carga hasta que Toyota responde, así nunca ves datos viejos.
 - **Esfera de controles** (desliza a la izquierda): cerrar, abrir, climatizador y última posición aparcado (abre la app de mapas del reloj). Abrir pide confirmación en pantalla. Tras cada orden la app despierta al coche y verifica su estado real antes de decirte "Vehículo cerrado".
 - **Climatizador**: una esfera que giras con la corona o con los botones +/− (18–29 °C); encender o apagar durante 10 minutos.
-- **Viajes y consumos** (desliza hacia arriba o toca la foto del coche): hasta 50 viajes de los últimos 30 días, media de consumo ponderada por distancia y detalle de cada trayecto. Muestra distancia, duración, combustible y velocidad media; porcentaje eléctrico y puntuación solo cuando Toyota los proporciona. Indica la cobertura y conserva los datos ausentes como desconocidos.
+- **Viajes y consumos** (desliza hacia arriba o toca la foto del coche): hasta 50 viajes de los últimos 30 días, media de consumo ponderada por distancia y detalle de cada trayecto. Muestra distancia, duración, combustible y velocidad media; porcentaje eléctrico y puntuación solo cuando Toyota los proporciona. Indica la cobertura y conserva los datos ausentes como desconocidos. Incluye un gráfico de hasta 12 viajes con fecha y una barra de distancia eléctrica cuando hay datos.
 - **Autónoma**: el reloj habla con Toyota por sí mismo por Wi-Fi o LTE, o a través del Bluetooth del móvil emparejado. La app de móvil es opcional.
 - **Mantiene la sesión**: el refresh token de Toyota mantiene la sesión. Si quieres, guarda la contraseña al iniciar sesión (desactivado por defecto, cifrada con su propia clave) y el reloj volverá a entrar solo si Toyota cierra la sesión.
+- **Información** (botón del garaje o de la pantalla de inicio): versión instalada, búsqueda manual de actualizaciones y borrado de sesión, contraseña guardada y datos del coche, con confirmación. La búsqueda manual no espera al intervalo de 24 horas.
 - **Se actualiza sola**: como mucho una vez al día, al abrirla, el reloj busca una release nueva en GitHub y te ofrece instalarla.
 - **Pensada para la batería**: sin sondeos en segundo plano, sin servicios, un único fichero de estado cifrado. Solo se despierta al coche cuando tú lo pides.
 
@@ -107,6 +108,10 @@ El lanzador de Windows descarga el script como texto legible y usa `RemoteSigned
 - Los comandos remotos dependen del coche y de la suscripción. El climatizador funciona 10 minutos y Toyota limita los arranques por ciclo de contacto.
 - El historial depende de los datos que Toyota devuelva para tu cuenta y coche. Consulta una página de hasta 50 viajes; la media corresponde a los viajes con datos, no necesariamente al mes completo. La respuesta real de viajes de la cuenta de desarrollo aún no se ha confirmado. No incluye comparación mensual ni gráfico de consumo instantáneo.
 - No está en Google Play: Play prohíbe introducir contraseñas en el reloj y una API no oficial no pasaría la revisión. Solo instalación manual.
+
+## Cómo se calcula el consumo medio
+
+Cada viaje usa `100 × litros / kilómetros`. La media del historial es `100 × suma de litros / suma de kilómetros`, equivalente a ponderar cada consumo por su distancia. Por ejemplo, 10 km a 10 L/100 km y 90 km a 5 L/100 km dan 5,5 L/100 km. Solo se incluyen viajes con combustible y distancia válida; cero combustible cuenta, un dato ausente no. La media corresponde a la cobertura mostrada.
 
 ## Desarrollo
 

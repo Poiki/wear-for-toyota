@@ -80,6 +80,7 @@ import androidx.wear.compose.foundation.LocalReduceMotion
 import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
 import androidx.wear.compose.foundation.pager.HorizontalPager
+import androidx.wear.compose.foundation.pager.PagerDefaults
 import androidx.wear.compose.foundation.pager.rememberPagerState
 import androidx.wear.compose.material3.AnimatedPage
 import androidx.wear.compose.material3.Button
@@ -118,14 +119,14 @@ fun GarageScreen(
     error: String?,
     onSelect: (String) -> Unit,
     onRetry: () -> Unit,
-    onUnlink: () -> Unit,
+    onAbout: () -> Unit,
 ) {
     if (vehicles.isEmpty()) {
         WaitFace(car = null, text = error ?: stringResource(R.string.busy_vehicles), working = error == null) {
             if (error != null) {
                 Button(onClick = onRetry, modifier = Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.retry)) }
-                OutlinedButton(onClick = onUnlink, modifier = Modifier.padding(top = 4.dp)) { Text(stringResource(R.string.unlink)) }
             }
+            OutlinedButton(onClick = onAbout, modifier = Modifier.padding(top = 4.dp)) { Text(stringResource(R.string.about_title)) }
         }
         return
     }
@@ -148,10 +149,10 @@ fun GarageScreen(
                         maxLines = 2, autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 13.sp))
                     CarPicture(images[vin], Modifier.fillMaxWidth().height(74.dp).padding(top = 4.dp))
                 }
-                OutlinedButton(onClick = onUnlink, enabled = busy == null,
+                OutlinedButton(onClick = onAbout,
                     modifier = Modifier.size(128.dp, 40.dp).align(Alignment.TopCenter).offset(y = 174.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.unlink), fontSize = 11.sp, lineHeight = 14.sp, textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.about_title), fontSize = 11.sp, lineHeight = 14.sp, textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -185,7 +186,7 @@ fun VehicleScreen(
             }
         } else {
             val pager = rememberPagerState(pageCount = { 2 })
-            HorizontalPager(state = pager, modifier = Modifier.pointerInput(onTrips, tripSwipeDistance) {
+            HorizontalPager(state = pager, gestureInclusion = PagerDefaults.gestureInclusion(pager, edgeZoneFraction = 0f), modifier = Modifier.pointerInput(onTrips, tripSwipeDistance) {
                 var drag = 0f
                 detectVerticalDragGestures(
                     onDragStart = { drag = 0f },
@@ -495,7 +496,7 @@ fun ClimateScreen(
 private const val ROTARY_STEP_PX = 48f
 
 @Composable
-fun LinkScreen(error: String?, onLoginHere: () -> Unit) {
+fun LinkScreen(error: String?, onLoginHere: () -> Unit, onAbout: () -> Unit) {
     val state = rememberTransformingLazyColumnState()
     ScreenScaffold(scrollState = state) { padding ->
         TransformingLazyColumn(state = state, contentPadding = padding) {
@@ -514,6 +515,9 @@ fun LinkScreen(error: String?, onLoginHere: () -> Unit) {
                 }
             }
             error?.let { item { Centered(it, MaterialTheme.typography.bodySmall, MaterialTheme.colorScheme.error) } }
+            item { OutlinedButton(onClick = onAbout, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.about_title), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            } }
         }
     }
 }

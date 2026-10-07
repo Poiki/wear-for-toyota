@@ -3,7 +3,6 @@
     <string name="app_name">Wear para Toyota</string>
 
     <string name="garage_title">Mi Garaje</string>
-    <string name="unlink">Desvincular</string>
 
     <string name="link_hint">Vincula el reloj desde la app del teléfono o inicia sesión aquí</string>
     <string name="login_here">Iniciar sesión aquí</string>
@@ -103,4 +102,17 @@
     <string name="trips_score">Puntuación Toyota</string>
     <string name="trips_back">Volver</string>
     <string name="trips_coverage_unknown">%1$d viajes mostrados</string>
+    <string name="trips_trend">Consumo por viaje</string>
+    <string name="trips_chart_count">Viajes con fecha: %1$d</string>
+    <string name="trips_chart_hint">Un punto por viaje</string>
+    <string name="trips_chart_missing">Sin datos: huecos</string>
+    <string name="about_title">Información</string>
+    <string name="about_version">Versión %1$s · compilación %2$d</string>
+    <string name="about_description">App no oficial para Wear OS y vehículos Toyota y Lexus de Europa.</string>
+    <string name="about_check_updates">Buscar actualización</string>
+    <string name="about_checking">Buscando…</string>
+    <string name="about_up_to_date">La app está actualizada.</string>
+    <string name="about_update_failed">No se pudo buscar la actualización. Comprueba la conexión y vuelve a intentarlo.</string>
+    <string name="about_clear">Limpiar credenciales</string>
+    <string name="about_clear_confirm">Se borrarán la sesión, la contraseña guardada y los datos del coche de este reloj. Tendrás que iniciar sesión de nuevo.</string>
 </resources>

@@ -13,8 +13,8 @@ android {
         applicationId = "com.poiki.toyotawear"
         minSdk = 30
         targetSdk = 37
-        versionCode = 7
-        versionName = "0.3.1"
+        versionCode = 8
+        versionName = "0.3.2"
     }
     // Optional release key: android/keystore.properties with storeFile, storePassword, keyAlias, keyPassword (git-ignored).
     val keystore = rootProject.file("keystore.properties")

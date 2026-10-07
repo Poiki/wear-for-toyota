@@ -78,13 +78,21 @@ def texts(tree):
     return [n.get('text') for n in tree.iter('node')]
 
 
-def check_trips(densities=(320, 378)):
+def check_trips(densities=(320, 378), locales=None):
     labels = [('en','Trips','Trip detail'), ('es','Viajes','Detalle del viaje'),
               ('de','Fahrten','Fahrtdetails'), ('fr','Trajets','Détail du trajet'),
               ('it','Viaggi','Dettaglio viaggio'), ('pt','Viagens','Detalhes da viagem')]
+    if locales is not None:
+        labels = [row for row in labels if row[0] in locales]
     for density in densities:
         adb('shell','wm','density',density)
         for locale,title,detail in labels:
+            folder = 'values' if locale == 'en' else 'values-' + locale
+            resources = ET.parse(ROOT / 'android/watch/src/main/res' / folder / 'strings.xml').getroot()
+            trend = resources.find("string[@name='trips_trend']").text
+            chart_hint = resources.find("string[@name='trips_chart_hint']").text
+            chart_missing = resources.find("string[@name='trips_chart_missing']").text
+            ev_label = resources.find("string[@name='trips_ev_share']").text
             launch('vehicle',locale)
             assert_safe_buttons(dump())
             screenshot(f'trips-entry-{density}-{locale}')
@@ -93,7 +101,26 @@ def check_trips(densities=(320, 378)):
             assert title in texts(tree), ('Swipe up did not open trips',locale,texts(tree))
             screenshot(f'trips-summary-{density}-{locale}')
             card=None
-            for _ in range(6):
+            chart_seen=False
+            for _ in range(14):
+                chart=next((n for n in tree.iter('node') if n.get('content-desc','').startswith(trend + '. ')),None)
+                if chart is not None and not chart_seen:
+                    description=chart.get('content-desc').replace(',','.')
+                    assert '5.2 L/100 km' in description and '5.9 L/100 km' in description, description
+                    for _ in range(3):
+                        _,top,_,bottom = map(int,re.findall(r'\d+',chart.get('bounds')))
+                        delta=int(227-(top+bottom)/2)
+                        if abs(delta) < 10:
+                            break
+                        adb('shell','input','swipe',227,227,227,227+max(-150,min(150,delta)),400)
+                        tree=dump()
+                        chart=next(n for n in tree.iter('node') if n.get('content-desc','').startswith(trend + '. '))
+                    for label in (trend,chart_hint,chart_missing):
+                        node=next(n for n in tree.iter('node') if n.get('text') == label)
+                        _,top,_,bottom=map(int,re.findall(r'\d+',node.get('bounds')))
+                        assert 30 <= top and bottom <= 424, ('Chart label clipped',locale,label,node.get('bounds'))
+                    chart_seen=True
+                    screenshot(f'trips-chart-{density}-{locale}')
                 card=next((n for n in tree.iter('node') if n.get('clickable')=='true' and any(
                     c.get('text','').replace(',','.') == '5.2 L/100 km' for c in n.iter('node'))),None)
                 if card is not None:
@@ -101,22 +128,118 @@ def check_trips(densities=(320, 378)):
                     if top >= 40 and bottom <= 414:
                         break
                     card = None  # Lazy lists can expose semantics for clipped, untappable cards.
-                adb('shell','input','swipe',227,360,227,150,400)
+                adb('shell','input','swipe',227,320,227,220,400)
                 tree=dump()
+            assert chart_seen, ('Consumption chart missing',locale)
             assert card is not None, 'Recent trip card missing'
             screenshot(f'trips-list-{density}-{locale}')
             tap(card)
             tree=dump()
             assert detail in texts(tree), ('Trip detail missing',locale,texts(tree))
             screenshot(f'trips-detail-{density}-{locale}')
+            for _ in range(8):
+                if ev_label in texts(tree) and '21.0%' in [t.replace(',','.') for t in texts(tree) if t]:
+                    value=next(n for n in tree.iter('node') if n.get('text','').replace(',','.') == '21.0%')
+                    _,top,_,bottom=map(int,re.findall(r'\d+',value.get('bounds')))
+                    if bottom > 320:
+                        adb('shell','input','swipe',227,320,227,160,400)
+                        tree=dump()
+                        assert '21.0%' in [t.replace(',','.') for t in texts(tree) if t]
+                    screenshot(f'trips-ev-{density}-{locale}')
+                    break
+                adb('shell','input','swipe',227,320,227,180,400)
+                tree=dump()
+            else:
+                raise AssertionError(('Electric distance missing',locale,texts(tree)))
             adb('shell','input','keyevent','KEYCODE_BACK')
             assert '43%' not in texts(dump()), 'Closing detail must stay in history'
             adb('shell','input','keyevent','KEYCODE_BACK')
             assert '43%' in texts(dump()), 'Back from history must return to vehicle'
-            time.sleep(1)  # Vehicle entrance animation must finish before the next gesture.
-            adb('shell','input','swipe',380,150,70,150,350)
+            time.sleep(2)  # Vehicle entrance animation must finish before the next gesture.
+            adb('shell','input','swipe',380,150,70,150,600)
             assert '43%' not in texts(dump()), 'Horizontal controls navigation must still work'
-            print(f'OK trips swipe + detail + back + controls: {locale}, {density} dpi',flush=True)
+            adb('shell','input','swipe',90,150,390,150,600)
+            assert '43%' in texts(dump()), 'Swipe right must return to status'
+            adb('shell','input','swipe',5,227,420,227,600)
+            assert 'Corolla Touring Sports - MY24' in texts(dump()), 'Left edge must return to garage'
+            print(f'OK trips + chart + EV + back + controls + edge back: {locale}, {density} dpi',flush=True)
+
+
+def check_about():
+    version = re.search(r'versionName\s*=\s*"([^"]+)"', (ROOT / 'android/watch/build.gradle.kts').read_text()).group(1)
+    def reveal(label):
+        for _ in range(10):
+            tree = dump()
+            try:
+                node = button(tree, label)
+                left, top, right, bottom = map(int, re.findall(r'\d+', node.get('bounds')))
+                if 40 <= top < bottom <= 414 and right > left:
+                    for child in node.iter('node'):
+                        if child.get('text') == label:
+                            x1,y1,x2,y2 = map(int,re.findall(r'\d+',child.get('bounds')))
+                            assert left <= x1 < x2 <= right and top <= y1 < y2 <= bottom, ('Clipped button text',label)
+                            assert abs((x1+x2)-(left+right)) <= 4, ('Off-center button text',label)
+                    return node
+            except AssertionError as e:
+                if not str(e).startswith('Button missing:'):
+                    raise
+            adb('shell','input','swipe',227,340,227,220,400)
+        raise AssertionError(('Button not fully visible',label,texts(dump())))
+
+    for density in (320,378):
+        adb('shell','wm','density',density)
+        for locale in ('en','es','de','fr','it','pt'):
+            folder = 'values' if locale == 'en' else 'values-' + locale
+            resources = ET.parse(ROOT / 'android/watch/src/main/res' / folder / 'strings.xml').getroot()
+            labels = {n.get('name'):n.text for n in resources.findall('string')}
+            launch('garage',locale)
+            tap(button(dump(),labels['about_title']))
+            tree = dump()
+            assert any(version in (t or '') for t in texts(tree)), ('Missing installed version',locale)
+            screenshot(f'about-version-{density}-{locale}')
+            check = reveal(labels['about_check_updates'])
+            screenshot(f'about-update-{density}-{locale}')
+            if locale == 'es' and density == 378:
+                before = ET.fromstring(adb('shell','run-as',PKG,'cat','shared_prefs/cache.xml'))
+                checked_at = next((n.get('value') for n in before if n.get('name') == 'updateCheckedAt'), '0')
+                tap(check)
+                for _ in range(12):
+                    tree = dump()
+                    if labels['about_up_to_date'] in texts(tree):
+                        break
+                    time.sleep(1)
+                else:
+                    raise AssertionError(('Manual update check failed',texts(tree)))
+                after = ET.fromstring(adb('shell','run-as',PKG,'cat','shared_prefs/cache.xml'))
+                assert int(next(n.get('value') for n in after if n.get('name') == 'updateCheckedAt')) > int(checked_at), 'Manual check must bypass daily cache'
+                screenshot('about-update-result-378-es')
+            tap(reveal(labels['about_clear']))
+            tree = dump()
+            assert labels['about_clear_confirm'] in texts(tree), ('Missing wipe confirmation',locale)
+            screenshot(f'about-confirm-{density}-{locale}')
+            adb('shell','input','keyevent','KEYCODE_BACK')
+            assert labels['about_clear_confirm'] not in texts(dump()), 'Cancel must close only the confirmation'
+            adb('shell','input','keyevent','KEYCODE_BACK')
+            assert 'Corolla Touring Sports - MY24' in texts(dump()), 'Cancel must keep the session and garage'
+            print(f'OK about + version + centered buttons + clear/cancel: {locale}, {density} dpi',flush=True)
+
+    # Emulator-only persisted dummy tokens: validate the actual wipe, not only its dialog.
+    launch('about','es','--es','tokens', '\'{"accessToken":"demo","refreshToken":"demo","expiresAtMs":9223372036854775807,"uuid":"demo","brand":"T"}\'')
+    before = ET.fromstring(adb('shell','run-as',PKG,'cat','shared_prefs/vault.xml'))
+    assert any(n.get('name') == 'tokens' for n in before)
+    tap(reveal('Limpiar credenciales'))
+    tap(reveal('Confirmar'))
+    assert 'Corolla Touring Sports - MY24' not in texts(dump())
+    after = ET.fromstring(adb('shell','run-as',PKG,'cat','shared_prefs/vault.xml'))
+    assert not any(n.get('name') in ('tokens','credentials') for n in after), 'Stored credentials must be removed'
+    cache = ET.fromstring(adb('shell','run-as',PKG,'cat','shared_prefs/cache.xml'))
+    assert not any(n.get('name') in ('vehicles','selected') or n.get('name','').startswith('raw:') for n in cache), 'Vehicle cache must be removed'
+    adb('shell','am','force-stop',PKG)
+    adb('shell','am','start','-n',PKG+'/.MainActivity')
+    assert 'Corolla Touring Sports - MY24' not in texts(dump()), 'Wipe must survive app restart'
+    tap(reveal('Información'))
+    assert any(version in (t or '') for t in texts(dump())), 'About must be available without credentials'
+    print('OK manual check bypass + confirmed credential wipe + restart + unlinked about',flush=True)
 
 
 def check_status():
@@ -185,6 +308,9 @@ if __name__ == '__main__':
     timeout = adb('shell', 'settings', 'get', 'system', 'screen_off_timeout').decode().strip()
     adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '600000')
     try:
+        if '--about' in sys.argv:
+            check_about()
+            sys.exit(0)
         if '--trips' in sys.argv:
             check_trips()
             sys.exit(0)

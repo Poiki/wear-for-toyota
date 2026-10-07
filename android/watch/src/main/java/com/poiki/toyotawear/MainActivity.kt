@@ -16,6 +16,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -26,16 +27,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
+import androidx.wear.compose.foundation.edgeSwipeToDismiss
+import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
 import androidx.wear.compose.material3.AlertDialog
 import androidx.wear.compose.material3.AlertDialogDefaults
 import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.ColorScheme
+import androidx.wear.compose.material3.Dialog
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.SwipeToDismissBox
 import androidx.wear.compose.material3.Text
@@ -135,6 +140,7 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     var login by remember { mutableStateOf(false) }
+    var about by remember { mutableStateOf(preview == "about") }
     var offer by remember { mutableStateOf<Releases.Apk?>(null) } // outlives Store.update so the dialog can animate out
     val stack = remember {
         mutableStateListOf(Route.Garage).apply {
@@ -166,21 +172,30 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
         // One short fade between the three top-level states; nothing animates while idle.
         Crossfade(targetState = screen, animationSpec = tween(250), label = "screen") { target ->
             when (target) {
-                "app" -> Stack(stack, onMap, unlockGate)
+                "app" -> Stack(stack, onMap, unlockGate) { about = true }
                 "login" -> SwipeToDismissBox(onDismissed = { login = false }) { isBackground ->
                     if (isBackground) {
-                        LinkScreen(error = null, onLoginHere = {})
+                        LinkScreen(error = null, onLoginHere = {}, onAbout = {})
                     } else {
                         LoginScreen(busy = busy, error = error) { email, password, lexus, savePassword ->
                             scope.launch { Store.login(email, password, if (lexus) "L" else "T", savePassword) }
                         }
                     }
                 }
-                else -> LinkScreen(error = error, onLoginHere = { Store.error.value = null; login = true })
+                else -> LinkScreen(error = error, onLoginHere = { Store.error.value = null; login = true }, onAbout = { about = true })
             }
         }
         // One dialog for every command outcome, whichever screen sent it.
         ResultDialogs(result)
+        Dialog(visible = about, onDismissRequest = { about = false }) {
+            AboutScreen(onClear = {
+                Store.unlink()
+                stack.clear()
+                stack.add(Route.Garage)
+                login = false
+                about = false
+            })
+        }
         if (updating) WaitFace(car = null, text = stringResource(R.string.busy_update), working = true)
         offer?.let { apk ->
             AlertDialog(
@@ -210,20 +225,28 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
 
 /** Minimal back stack: the top screen slides over the previous one and swipes away to go back. */
 @Composable
-private fun Stack(stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
+private fun Stack(stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Unit, unlockGate: () -> String?, onAbout: () -> Unit) {
     val top = stack.last()
     if (stack.size == 1) {
-        Screen(top, stack, onMap, unlockGate)
+        Screen(top, stack, onMap, unlockGate, onAbout)
     } else {
         val below = stack[stack.size - 2]
-        SwipeToDismissBox(onDismissed = { stack.removeAt(stack.size - 1) }, backgroundKey = below, contentKey = top) { isBackground ->
-            Screen(if (isBackground) below else top, stack, onMap, unlockGate)
+        val dismissState = rememberSwipeToDismissBoxState()
+        val snapshot by Store.snapshot.collectAsState()
+        val busy by Store.busy.collectAsState()
+        // The pager owns horizontal drags; the native edge modifier handles returning to the garage.
+        val paged = top == Route.Vehicle && snapshot != null && busy == null
+        SwipeToDismissBox(onDismissed = { stack.removeAt(stack.size - 1) }, state = dismissState,
+            userSwipeEnabled = !paged, backgroundKey = below, contentKey = top) { isBackground ->
+            Box(if (paged && !isBackground) Modifier.edgeSwipeToDismiss(dismissState) else Modifier) {
+                Screen(if (isBackground) below else top, stack, onMap, unlockGate, onAbout)
+            }
         }
     }
 }
 
 @Composable
-private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Unit, unlockGate: () -> String?) {
+private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Unit, unlockGate: () -> String?, onAbout: () -> Unit) {
     val vehicles by Store.vehicles.collectAsState()
     val images by Store.carImages.collectAsState()
     val selectedVin by Store.selectedVin.collectAsState()
@@ -243,7 +266,7 @@ private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double
                 stack.add(Route.Vehicle)
             },
             onRetry = { scope.launch { Store.loadVehicles() } },
-            onUnlink = { Store.unlink() },
+            onAbout = onAbout,
         )
         Route.Vehicle -> {
             // Reads the car whenever it has no fresh data and nothing is running; an error waits for "Retry".

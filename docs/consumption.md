@@ -32,6 +32,30 @@ La media de varios viajes es `100 × suma(litros) / suma(km)`, no la media aritm
 
 Con estos campos podemos mostrar resumen, lista y detalle. Los nombres de origen/destino necesitarían datos adicionales o geocodificación: empezar por la fecha, sin servicios externos. El gráfico ondulado por kilómetro y «mejor tramo» requieren muestras de consumo dentro de cada viaje; el endpoint documentado aporta totales y puntos GPS, sin confirmar esas muestras. No dibujar ese gráfico con valores inventados. Se puede mostrar una tendencia real entre viajes o días.
 
+La siguiente revisión añade al historial un gráfico de hasta 12 viajes con fecha, ordenados de antiguo a reciente, usando Canvas sin dependencias. Cada punto corresponde al consumo medio del viaje entero, en L/100 km; un dato ausente rompe la línea, cero combustible se conserva y un solo viaje muestra un punto. Las fechas, el número de viajes y los valores accesibles explican la cobertura. La media superior sigue siendo ponderada sobre los viajes disponibles, no una media mensual completa. En el detalle, la distancia eléctrica tiene una barra cuando `hdc.evDistance` existe.
+
+La selección cronológica, el límite de 12, los viajes sin fecha, los huecos y los ceros tienen una prueba adicional: ocho tests de core pasan en esta revisión. En la pantalla del coche, el gesto nativo desde el borde izquierdo vuelve al garaje sin competir con el paginador; el gesto hacia arriba sigue abriendo viajes.
+
+## Funciones de la API que aún no mostramos — revisión 2026-10-07
+
+Se ha contrastado el cliente actual con el código y los modelos de **pytoyoda, un cliente no oficial de Toyota EU**. Documentado no significa confirmado para esta cuenta: los campos y permisos dependen del vehículo, la región y la suscripción.
+
+| Función | Lectura o campo | Estado / utilidad |
+| --- | --- | --- |
+| Resúmenes mensuales y diarios | `/v1/trips`, `payload.summary[].histograms` | El GET actual pide `summary=true`, pero el parser descarta los agregados. Permite barras por día y comparativas con periodos completos, tras validar la respuesta. |
+| Puntuaciones y datos híbridos ampliados | `scores.acceleration/braking/constantSpeed`, `hdc.evTime/ecoDist/powerDist`, `behaviours` | Solo usamos puntuación global y distancia EV. Son opcionales; añadir indicadores únicamente si llegan. |
+| Avisos y estado mecánico | `GET /v1/vehiclehealth/status`, `warning`, `quantityOfEngOilIcon` | Avisos con fecha; no equivale a diagnósticos completos ni garantiza presiones de neumáticos. |
+| Notificaciones del coche | `GET /v2/notification/history` | Mensajes, categoría, fecha y estado de lectura. No hay método documentado para marcarlas como leídas. |
+| Historial de mantenimiento | `GET /v1/servicehistory/vehicle/summary` | Fechas, categoría y taller cuando estén disponibles. |
+| Datos de carga ampliados | `remainingChargeTime`, `evRangeWithAc`, `chargingSchedules`, `nextChargingEvent` | Información para eléctricos/PHEV; comprobar primero el endpoint válido. El cliente externo usa una ruta eléctrica diferente de la nuestra. |
+| Ajustes de climatización | `heatingOptions`, `seatOptions`, duración | Ya conservamos las opciones guardadas, pero no mostramos controles individuales. Se necesita validar capacidad y límites por vehículo. |
+| Temperatura interior y estado del clima | `currentTemperature`, `startedAt`, `duration` | El GET actual puede traerlos mientras funciona. No confundir temperatura medida con la seleccionada ni presentar una cuenta atrás como estado confirmado. |
+| Localizar con luces o sonido | Órdenes `hazard-on/off`, `headlight-on/off`, `sound-horn`, `buzzer-warning` | Candidatas para una futura versión; la presencia en el enum no confirma soporte real. No se probaron órdenes al coche. |
+
+Fuentes: [modelos de viajes](https://raw.githubusercontent.com/pytoyoda/pytoyoda/main/pytoyoda/models/endpoints/trips.py), [API del cliente](https://pytoyoda.github.io/pytoyoda/pytoyoda/api.html), [rutas actuales](https://raw.githubusercontent.com/pytoyoda/pytoyoda/main/pytoyoda/const.py), [estado eléctrico](https://raw.githubusercontent.com/pytoyoda/pytoyoda/main/pytoyoda/models/endpoints/electric.py), [climatización](https://raw.githubusercontent.com/pytoyoda/pytoyoda/main/pytoyoda/models/endpoints/climate.py), [órdenes](https://raw.githubusercontent.com/pytoyoda/pytoyoda/main/pytoyoda/models/endpoints/command.py).
+
+Prioridad propuesta: validar agregados reales y añadir gráficos diarios; después avisos y mantenimiento. La comparación con el mes anterior requiere dos periodos completos. No estimar kWh, batería de 12 V, presión por rueda ni consumo por kilómetro a partir de campos que no están confirmados.
+
 Comparar con el mes anterior exige cobertura completa de ambos periodos. Los consejos y la puntuación de eficiencia requieren campos de Toyota o una fórmula explícita; quedan fuera de la primera versión. EV usa otra unidad de energía si Toyota la proporciona: no mostrar L/100 km como si fueran kWh/100 km.
 
 ## Integración y validación
