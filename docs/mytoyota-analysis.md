@@ -1,5 +1,7 @@
 # Análisis funcional de MyToyota (app oficial, Europa)
 
+Actualización del 15 de octubre de 2026: el [contraste estático con REA del APK 2.25.2](mytoyota-rea-review.md) añade APIs, autenticación, modelos, prioridades y correcciones verificadas. Las observaciones de teléfono que siguen son históricas y mantienen sus pendientes originales.
+
 Estado: en curso, por observación directa en el teléfono del usuario (MyToyota 2.25.2, sesión iniciada por él). Sin credenciales, VIN ni coordenadas reales. El emulador quedó descartado (ver mytoyota-emulator-compatibility.md).
 
 Vehículo observado: Toyota Corolla Hybrid Touring Sports (híbrido no enchufable).

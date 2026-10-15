@@ -130,4 +130,12 @@
     <string name="climate_selected">%1$s</string>
     <string name="climate_apply">Aplicar e ligar</string>
     <string name="climate_options_hint">Toque para mudar a seleção.</string>
+    <string name="result_climate_options_unverified">Climatização ligada. A Toyota não confirma todas as opções.</string>
+    <string name="result_climate_still_on">A climatização continua ligada.</string>
+    <string name="result_climate_still_off">A climatização continua desligada.</string>
+    <string name="result_climate_starting">A climatização ainda está a iniciar.</string>
+    <string name="result_climate_stopping">A climatização ainda está a desligar.</string>
+    <string name="result_climate_unavailable">Não foi possível verificar a climatização. Consulte MyToyota.</string>
+    <string name="climate_interior">Interior %1$s°C</string>
+    <string name="climate_remaining">Faltam %1$d min</string>
 </resources>

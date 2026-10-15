@@ -19,6 +19,9 @@ import com.poiki.toyotawear.core.ToyotaError
 import com.poiki.toyotawear.core.ToyotaLoginError
 import com.poiki.toyotawear.core.TripHistory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
@@ -38,6 +41,7 @@ object Store {
 
     /** Tokens are on the watch. They are only decrypted for the first request: the Keystore costs ~60 ms at startup. */
     val linked = MutableStateFlow(false)
+    val session = MutableStateFlow(0L)
     val vehicles = MutableStateFlow<List<JSONObject>>(emptyList())
     val selectedVin = MutableStateFlow<String?>(null)
     val snapshot = MutableStateFlow<Snapshot?>(null)
@@ -72,16 +76,16 @@ object Store {
     private const val FRESH_MS = 2 * 60_000L
 
     @Volatile private var tokens: Tokens? = null
+    private val tokenRefreshLock = Any()
     private lateinit var app: Context
     private lateinit var vault: Vault
     /** The saved password, only if the user asked for it: its own strict Keystore key. */
     private lateinit var secrets: Vault
     private lateinit var cache: SharedPreferences
-    private val api = ToyotaApi { freshTokens() }
-    private val climateSaved = mutableMapOf<String, JSONObject?>()
+    @Volatile private var api = newApi(0L)
     private var climateLoadedVin: String? = null
 
-    // ponytail: fixed ~30 s wake schedule; tune once real cars have been measured.
+    // shortcut: fixed ~30 s wake schedule; tune once real cars have been measured.
     private val wakePollMs = longArrayOf(5_000, 5_000, 10_000, 10_000)
 
     @Synchronized
@@ -103,7 +107,9 @@ object Store {
     }
 
     /** Opens a car: its data only if it was read moments ago, otherwise the screen waits for Toyota. */
+    @Synchronized
     fun select(vin: String) {
+        if (vehicles.value.none { it.optString("vin") == vin }) return
         selectedVin.value = vin
         cache.edit().putString("selected", vin).apply()
         snapshot.value = raw(vin)?.takeIf { System.currentTimeMillis() - it.optLong("fetchedAt") < FRESH_MS }
@@ -120,29 +126,48 @@ object Store {
         error.value = null
     }
 
-    fun saveTokens(t: Tokens?) {
-        vault.write("tokens", t?.toJson())
-        tokens = t
-        linked.value = t != null
+    private fun newApi(revision: Long) = ToyotaApi({ freshTokens(revision) }, { rejected -> freshTokens(revision, rejected.accessToken) })
+
+    /** A new link invalidates old requests before exposing the new account. Token rotation uses freshTokens instead. */
+    @Synchronized
+    fun saveTokens(t: Tokens?, email: String = "", password: String? = null): Boolean {
+        api.invalidate()
+        tokens = null
+        linked.value = false
+        try {
+            vault.write("tokens", null)
+            secrets.write(CREDENTIALS, null)
+            clearVehicleData()
+            vault.write("tokens", t?.toJson())
+            tokens = t
+            return saveCredentials(email, password)
+        } finally {
+            session.value += 1
+            api = newApi(session.value)
+            linked.value = tokens != null
+        }
     }
 
     /** Keeps the password under the strict key, or forgets it when [password] is null. False when this watch's Keystore refused it. */
-    fun saveCredentials(email: String, password: String?): Boolean {
+    @Synchronized
+    private fun saveCredentials(email: String, password: String?): Boolean {
         secrets.write(CREDENTIALS, null)
         if (password == null) return true
         return runCatching { secrets.write(CREDENTIALS, JSONObject().put("email", email).put("password", password).toString()) }.isSuccess
     }
 
-    fun unlink() {
-        saveTokens(null)
-        secrets.write(CREDENTIALS, null)
-        cache.edit().clear().apply()
-        vehicles.value.forEach { carFile(it.optString("vin")).delete() }
+    fun unlink() { saveTokens(null) }
+
+    private fun clearVehicleData() {
+        if (!cache.edit().clear().commit()) throw IOException("Could not clear previous Toyota account data")
+        val files = app.filesDir.listFiles() ?: throw IOException("Could not read Toyota image cache")
+        files.filter { it.isFile && it.name.startsWith("car-") && it.name.endsWith(".png") }.forEach {
+            if (!it.delete()) throw IOException("Could not clear previous Toyota image")
+        }
         vehicles.value = emptyList()
         selectedVin.value = null
         snapshot.value = null
         carImages.value = emptyMap()
-        climateSaved.clear()
         climateTemp.value = null
         climateChoices.value = emptyList()
         climateLoading.value = false
@@ -150,18 +175,22 @@ object Store {
         climateLoadedVin = null
         tripHistory.value = null
         tripsError.value = null
+        tripsLoading.value = false
+        busy.value = null
         result.value = null
         error.value = null
     }
 
     /** Standalone login on the watch. The password is kept only with [savePassword], to sign in again when the session dies. */
-    suspend fun login(email: String, password: String, brand: String, savePassword: Boolean) = work(R.string.busy_login) {
-        saveTokens(ToyotaAuth.login(email, password, brand))
-        if (!saveCredentials(email, password.takeIf { savePassword })) error.value = app.getString(R.string.err_save_password)
+    suspend fun login(email: String, password: String, brand: String, savePassword: Boolean) = work(R.string.busy_login) { api ->
+        val next = ToyotaAuth.login(email, password, brand)
+        commit(api) {
+            if (!saveTokens(next, email, password.takeIf { savePassword })) error.value = app.getString(R.string.err_save_password)
+        }
     }
 
     /** Refreshes Toyota's vehicle metadata on launch; cached pictures need no second download. */
-    suspend fun loadVehicles() = work(R.string.busy_vehicles) {
+    suspend fun loadVehicles() = work(R.string.busy_vehicles) { api ->
         // Emulator previews have no Toyota session.
         if (tokens?.accessToken == "demo") return@work
         val all = api.vehicles()
@@ -170,28 +199,32 @@ object Store {
         list.forEach { v ->
             val vin = v.getString("vin")
             Log.i("ToyotaWear", "Remote services: display=${v.optString("remoteDisplay")}, subscription=${v.optString("remoteSubscriptionStatus")}")
-            if (carImages.value[vin] == null) runCatching { fetchCarImage(vin, v.optString("image")) }
+            if (carImages.value[vin] == null) optional { fetchCarImage(api, vin, v.optString("image")) }
         }
-        cache.edit().putString("vehicles", all.toString()).apply()
-        vehicles.value = list
-        select(list.firstOrNull { it.optString("vin") == selectedVin.value }?.getString("vin") ?: list.first().getString("vin"))
+        commit(api) {
+            cache.edit().putString("vehicles", all.toString()).apply()
+            vehicles.value = list
+            select(list.firstOrNull { it.optString("vin") == selectedVin.value }?.getString("vin") ?: list.first().getString("vin"))
+        }
     }
 
     /** Reads the selected vehicle; with [wake] it first asks the car for fresh status and polls until its timestamp advances. */
-    suspend fun refresh(wake: Boolean) = work(if (wake) R.string.busy_wake else R.string.busy_refresh) {
+    suspend fun refresh(wake: Boolean) = work(if (wake) R.string.busy_wake else R.string.busy_refresh) { api ->
         // An error, not a silent return: the vehicle screen retries automatically only while there is no error.
         val (vin, vehicle) = current() ?: throw ToyotaError(404, null, "selected vehicle not in the list")
-        readAll(vin, vehicle, wake)
+        readAll(api, vin, vehicle, wake)
     }
 
     /** door-lock / door-unlock, then verification by reading the car's real state. */
-    suspend fun lock(lock: Boolean) = work(R.string.busy_sending) {
+    suspend fun lock(lock: Boolean) = work(R.string.busy_sending) { api ->
         val (vin, vehicle) = current() ?: return@work
         api.command(vin, if (lock) "door-lock" else "door-unlock")
-        busy.value = app.getString(R.string.busy_verifying)
-        readAll(vin, vehicle, wake = true)
-        val ok = snapshot.value?.locked == lock
-        result.value = CommandResult(
+        // Start after the API returns: this command may have waited behind another request.
+        val confirmedAfter = System.currentTimeMillis()
+        commit(api) { busy.value = app.getString(R.string.busy_verifying) }
+        val refreshed = readAll(api, vin, vehicle, wake = true)
+        val ok = refreshed && raw(vin)?.let(Snapshot::from)?.confirmsLock(vin, lock, confirmedAfter) == true
+        commit(api) { result.value = CommandResult(
             System.currentTimeMillis(),
             app.getString(
                 when {
@@ -201,61 +234,75 @@ object Store {
                 },
             ),
             ok,
-        )
+        ) }
     }
 
-    /** Starts or stops the climate at [climateTemp] for CLIMATE_MINUTES, then reads the climate status once. */
-    suspend fun climate(start: Boolean) = work(R.string.busy_sending) {
+    /** Sends once, requests fresh climate data and polls the reported vehicle state. */
+    suspend fun climate(start: Boolean) = work(R.string.busy_sending) { api ->
         val (vin, _) = current() ?: return@work
         if (climateLoading.value || tokens?.accessToken == "demo") return@work
-        val desired = Climate.settings(climateSaved[vin], climateChoices.value)
-        val accepted = api.climate(vin, start, climateTemp.value ?: 21.0, CLIMATE_MINUTES, desired)
-        if (!accepted) {
-            result.value = CommandResult(System.currentTimeMillis(), app.getString(R.string.result_rejected), false)
+        if (start && (climateLoadedVin != vin || climateError.value != null)) {
+            commit(api) { error.value = climateError.value ?: app.getString(R.string.result_climate_unavailable) }
             return@work
         }
-        busy.value = app.getString(R.string.busy_verifying)
-        delay(8_000)
-        val status = optional { api.climateStatus(vin) }
-        status?.let { cl -> update(vin) { it.put("climate", cl) } }
-        val ok = Climate.confirmed(start, desired, status)
-        result.value = CommandResult(
-            System.currentTimeMillis(),
-            app.getString(
-                when {
-                    ok && start -> R.string.result_climate_on
-                    ok -> R.string.result_climate_off
-                    else -> R.string.result_unconfirmed
-                },
-            ),
-            ok,
+        val desired = Climate.settings(null, climateChoices.value)
+        val before = optional { api.climateStatus(vin, timeoutMs = 5_000, retry = false) }
+        val accepted = api.climate(vin, start, climateTemp.value ?: 21.0, CLIMATE_MINUTES, desired)
+        if (!accepted) {
+            commit(api) { result.value = CommandResult(System.currentTimeMillis(), app.getString(R.string.result_rejected), false) }
+            return@work
+        }
+        commit(api) { busy.value = app.getString(R.string.busy_verifying) }
+        val status = Climate.awaitStatus(start, desired, before,
+            read = { timeout -> api.climateStatus(vin, timeoutMs = timeout, retry = false) },
+            pause = { ms -> delay(ms); currentCoroutineContext().ensureActive(); api.checkActive() },
+            onStatus = { cl -> update(api, vin) { it.put("climate", cl) } },
+            refresh = { api.refreshClimateStatus(vin) },
         )
+        val ok = Climate.confirmed(start, null, status, before)
+        val fresh = Climate.isFresh(status, before)
+        val text = app.getString(when {
+            ok && start && !Climate.confirmed(true, desired, status, before) -> R.string.result_climate_options_unverified
+            ok && start -> R.string.result_climate_on
+            ok -> R.string.result_climate_off
+            fresh && status?.optString("status") == "running" -> R.string.result_climate_still_on
+            fresh && status?.optString("status") == "stopped" -> R.string.result_climate_still_off
+            fresh && status?.optString("status") == "starting" -> R.string.result_climate_starting
+            fresh && status?.optString("status") == "stopping" -> R.string.result_climate_stopping
+            else -> R.string.result_climate_unavailable
+        })
+        commit(api) { result.value = CommandResult(System.currentTimeMillis(), text, ok) }
     }
 
     /** Toyota's saved climate settings give the initial dial temperature (default 21 °C). */
     suspend fun loadClimateSettings() = withContext(Dispatchers.IO) {
+        val api = api
         val (vin, vehicle) = current() ?: return@withContext
         if (tokens?.accessToken == "demo" || climateLoadedVin == vin || climateLoading.value) return@withContext
-        climateLoading.value = true
-        climateError.value = null
+        if (!commit(api) { climateLoading.value = true; climateError.value = null }) return@withContext
         try {
             val saved = api.climateSettings(vin) ?: throw ToyotaError(404, null, "no climate settings")
-            if (selectedVin.value != vin || !linked.value) return@withContext
-            // Active climate status describes the current run; saved settings only describe defaults.
-            val status = raw(vin)?.optJSONObject("climate")
-            val current = Climate.settings(saved, Climate.Option.entries.mapNotNull { option ->
-                Climate.value(status, option)?.let { Climate.Choice(option, emptyList(), it) }
-            })
-            climateSaved[vin] = current
-            climateChoices.value = Climate.choices(vehicle, current)
-            val temperature = saved.optJSONObject("temperature")
-            val value = temperature?.optDouble("value")?.takeIf { it.isFinite() } ?: 21.0
-            setClimateTemp(if (temperature?.optString("unit") == "F") (value - 32) * 5 / 9 else value)
-            climateLoadedVin = vin
+            commit(api) {
+                if (selectedVin.value != vin || !linked.value) return@commit
+                // Active climate status describes the current run; saved settings only describe defaults.
+                val status = raw(vin)?.optJSONObject("climate")
+                val current = Climate.settings(saved, Climate.Option.entries.mapNotNull { option ->
+                    Climate.value(status, option)?.let { Climate.Choice(option, emptyList(), it) }
+                })
+                climateChoices.value = Climate.choices(vehicle, current)
+                val temperature = saved.optJSONObject("temperature")
+                val value = temperature?.optDouble("value")?.takeIf { it.isFinite() } ?: 21.0
+                setClimateTemp(if (temperature?.optString("unit") == "F") (value - 32) * 5 / 9 else value)
+                climateLoadedVin = vin
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ToyotaLoginError) {
+            commit(api) { saveTokens(null); error.value = humanize(e) }
         } catch (e: Exception) {
-            if (selectedVin.value == vin && linked.value) climateError.value = humanize(e)
+            commit(api) { if (selectedVin.value == vin && linked.value) climateError.value = humanize(e) }
         } finally {
-            if (selectedVin.value == vin) climateLoading.value = false
+            commit(api) { if (selectedVin.value == vin) climateLoading.value = false }
         }
     }
 
@@ -273,17 +320,21 @@ object Store {
 
     /** On-demand trip read; its failure must not disable the vehicle controls. */
     suspend fun loadTrips() = withContext(Dispatchers.IO) {
+        val api = api
         if (tokens?.accessToken == "demo" || tripsLoading.value) return@withContext
         val vin = selectedVin.value ?: return@withContext
-        tripsLoading.value = true
-        tripsError.value = null
+        if (!commit(api) { tripsLoading.value = true; tripsError.value = null }) return@withContext
         try {
             val history = api.trips(vin)
-            if (selectedVin.value == vin) tripHistory.value = history
+            commit(api) { if (selectedVin.value == vin) tripHistory.value = history }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: ToyotaLoginError) {
+            commit(api) { saveTokens(null); error.value = humanize(e) }
         } catch (e: Exception) {
-            if (selectedVin.value == vin) tripsError.value = humanize(e)
+            commit(api) { if (selectedVin.value == vin) tripsError.value = humanize(e) }
         } finally {
-            tripsLoading.value = false
+            commit(api) { tripsLoading.value = false }
         }
     }
 
@@ -301,13 +352,12 @@ object Store {
             .put("fetchedAt", System.currentTimeMillis())
         cache.edit().putString("vehicles", JSONArray().put(vehicle).toString()).apply()
         vehicles.value = listOf(vehicle)
-        store("DEMO", raw)
+        store(api, "DEMO", raw)
         select("DEMO")
         climateTemp.value = 21.0
         vehicle.put("extendedCapabilities", JSONObject().apply { Climate.Option.entries.forEach { put(it.capability, true); it.ventilation?.let { key -> put(key, true) } } })
         val demoSettings = JSONObject().put("heatingOptions", JSONObject().put("frontDefroster", "off").put("rearDefogger", "off").put("steeringHeater", "off"))
             .put("seatOptions", JSONObject().put("driverSeat", "off").put("passengerSeat", "off").put("rearDriverSeat", "off").put("rearPassengerSeat", "off"))
-        climateSaved["DEMO"] = demoSettings
         climateChoices.value = Climate.choices(vehicle, demoSettings)
         climateLoadedVin = "DEMO"
         tokens = Tokens("demo", "demo", Long.MAX_VALUE, "demo", "T") // in memory only; real calls fail with 401
@@ -322,29 +372,39 @@ object Store {
         linked.value = true
     }
 
-    private suspend fun work(label: Int, block: suspend () -> Unit) = withContext(Dispatchers.IO) {
-        if (busy.value != null) return@withContext
-        busy.value = app.getString(label)
-        error.value = null
+    private suspend fun work(label: Int, block: suspend (ToyotaApi) -> Unit) = withContext(Dispatchers.IO) {
+        val api = api
+        if (!synchronized(this@Store) { api === this@Store.api && busy.compareAndSet(null, app.getString(label)) }) return@withContext
+        commit(api) { error.value = null; result.value = null }
         try {
-            block()
+            api.checkActive()
+            block(api)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: ToyotaLoginError) {
-            if (!linked.value) {
-                error.value = app.getString(R.string.err_login)
-            } else {
-                error.value = humanize(e)
-                saveTokens(null)
+            commit(api) {
+                val message = if (linked.value) humanize(e) else app.getString(R.string.err_login)
+                if (linked.value) saveTokens(null)
+                error.value = message
             }
         } catch (e: Exception) {
-            Log.w("ToyotaWear", "${app.getString(label)} failed: ${e.javaClass.simpleName}: ${e.message}")
-            error.value = humanize(e)
+            commit(api) {
+                Log.w("ToyotaWear", "${app.getString(label)} failed: ${e.javaClass.simpleName}")
+                error.value = humanize(e)
+            }
         } finally {
-            busy.value = null
+            commit(api) { busy.value = null }
         }
     }
 
-    private suspend fun readAll(vin: String, vehicle: JSONObject, wake: Boolean) {
+    /** Commits and account replacement share a monitor, so a late response cannot repopulate a cleared account. */
+    private inline fun commit(client: ToyotaApi, block: () -> Unit): Boolean = synchronized(this) {
+        if (client !== api) false else { block(); true }
+    }
+
+    private suspend fun readAll(api: ToyotaApi, vin: String, vehicle: JSONObject, wake: Boolean): Boolean {
         val out = JSONObject().put("vehicle", vehicle)
+        var refreshed = false
         if (wake) {
             val accepted = api.wake(vin)
             val before = Snapshot.timestamp(raw(vin)?.optJSONObject("status")) ?: 0L
@@ -358,31 +418,35 @@ object Store {
                     break
                 }
             }
-            if (!accepted) error.value = app.getString(R.string.err_wake_rejected)
-            else if (!advanced) error.value = app.getString(R.string.err_no_response)
-            busy.value = app.getString(R.string.busy_refresh)
+            commit(api) {
+                if (!accepted) error.value = app.getString(R.string.err_wake_rejected)
+                else if (!advanced) error.value = app.getString(R.string.err_no_response)
+                busy.value = app.getString(R.string.busy_refresh)
+            }
+            refreshed = accepted && advanced
         }
         if (!out.has("status")) out.put("status", api.status(vin))
         out.put("telemetry", optional { api.telemetry(vin) })
         if (Snapshot.isElectric(vehicle)) out.put("electric", optional { api.electric(vin) })
         out.put("fetchedAt", System.currentTimeMillis())
-        store(vin, out) // the status face can show lock, energy and mileage now; position and climate follow
+        store(api, vin, out) // the status face can show lock, energy and mileage now; position and climate follow
         out.put("location", optional { api.location(vin) })
         out.put("climate", optional { api.climateStatus(vin) })
-        store(vin, out)
+        store(api, vin, out)
+        return refreshed
     }
 
-    private fun store(vin: String, out: JSONObject) {
+    private fun store(api: ToyotaApi, vin: String, out: JSONObject) = commit(api) {
         cache.edit().putString("raw:$vin", out.toString()).apply()
         if (vin == selectedVin.value) snapshot.value = Snapshot.from(out)
     }
 
     private fun raw(vin: String): JSONObject? = cache.getString("raw:$vin", null)?.let { runCatching { JSONObject(it) }.getOrNull() }
 
-    private inline fun update(vin: String, mutate: (JSONObject) -> Unit) {
-        val r = raw(vin) ?: return
+    private inline fun update(api: ToyotaApi, vin: String, mutate: (JSONObject) -> Unit) = commit(api) {
+        val r = raw(vin) ?: return@commit
         mutate(r)
-        store(vin, r)
+        store(api, vin, r)
     }
 
     private fun current(): Pair<String, JSONObject>? {
@@ -392,12 +456,22 @@ object Store {
     }
 
     /** Toyota "selectively 500s" some endpoints: one failed optional read must not sink the whole refresh. */
-    private fun <T> optional(block: () -> T): T? = runCatching(block).getOrNull()
+    private fun <T> optional(block: () -> T): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: ToyotaLoginError) {
+        throw e
+    } catch (e: Exception) {
+        if (e is ToyotaError && (e.httpCode == 401 || e.httpCode == 403)) throw e
+        Log.w("ToyotaWear", "Optional read failed: ${e.javaClass.simpleName}")
+        null
+    }
 
     private fun carFile(vin: String) = File(app.filesDir, "car-$vin.png")
 
     /** Downloads Toyota's picture of the car once, shrinks it to 320 px and keeps it as a small PNG. */
-    private fun fetchCarImage(vin: String, url: String) {
+    private fun fetchCarImage(api: ToyotaApi, vin: String, url: String) {
         if (url.isBlank()) return
         val bytes = URL(url).openStream().use { it.readBytes() }
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -409,31 +483,48 @@ object Store {
         } else {
             decoded
         }
-        carFile(vin).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        carImages.value = carImages.value + (vin to bmp)
+        commit(api) {
+            carFile(vin).outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            carImages.value = carImages.value + (vin to bmp)
+        }
     }
 
-    @Synchronized
-    private fun freshTokens(): Tokens {
-        val t = tokens
-            ?: runCatching { vault.read("tokens")?.let(Tokens::fromJson) }.getOrNull()?.also { tokens = it }
-            ?: throw ToyotaLoginError("no tokens")
-        if (t.isFresh()) return t
+    private fun checkSession(revision: Long) {
+        if (revision != session.value) throw CancellationException("Toyota session changed")
+    }
+
+    private fun freshTokens(revision: Long, rejectedAccessToken: String? = null): Tokens = synchronized(tokenRefreshLock) {
+        val t = synchronized(this) {
+            checkSession(revision)
+            tokens ?: vault.read("tokens")?.let(Tokens::fromJson)?.also { tokens = it }
+                ?: throw ToyotaLoginError("no tokens")
+        }
+        if (rejectedAccessToken != null && t.accessToken != rejectedAccessToken) return t
+        if (rejectedAccessToken == null && t.isFresh()) return t
         val next = try {
             ToyotaAuth.refresh(t)
         } catch (e: ToyotaLoginError) {
-            relogin(t.brand) ?: throw e
+            relogin(revision, t.brand) ?: throw e
         }
-        return next.also { saveTokens(it) }
+        synchronized(this) {
+            checkSession(revision)
+            if (next.uuid != t.uuid || next.brand != t.brand) throw ToyotaLoginError("Toyota session identity changed")
+            vault.write("tokens", next.toJson())
+            tokens = next
+        }
+        next
     }
 
     /** The refresh token was rejected: sign in again with the saved password, if there is one. A rejected password is forgotten. */
-    private fun relogin(brand: String): Tokens? {
-        val saved = secrets.read(CREDENTIALS)?.let(::JSONObject) ?: return null
+    private fun relogin(revision: Long, brand: String): Tokens? {
+        val saved = synchronized(this) {
+            checkSession(revision)
+            secrets.read(CREDENTIALS)?.let(::JSONObject)
+        } ?: return null
         return try {
             ToyotaAuth.login(saved.getString("email"), saved.getString("password"), brand)
         } catch (e: ToyotaLoginError) {
-            secrets.write(CREDENTIALS, null)
+            synchronized(this) { checkSession(revision); secrets.write(CREDENTIALS, null) }
             throw e
         }
     }

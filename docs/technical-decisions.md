@@ -24,7 +24,7 @@ Destilado de `toyota-api.md`, `toyota-auth.md`, `wearos-analysis.md`, `oem-wear-
 ## 4. Red y JSON: `HttpURLConnection` + `org.json` + coroutines
 
 - Alternativas: OkHttp (+1,3 MB AAR), Ktor (+2,2 MB), Retrofit, kotlinx.serialization/Moshi.
-- Elegida: plataforma pura. Son ~8 endpoints REST JSON; TLS/gzip/HTTP 1.1 bastan. Coroutines ya vienen con Compose. Reglas heredadas de pytoyoda: peticiones **en serie**, backoff 2/4/8 s en 429/5xx, `followRedirects=false` en el `authorize`, cabeceras idénticas a pytoyoda (`x-appversion`, `x-channel`, `x-client-ref`, `x-correlationid`, `x-region`, `x-user-region`, `x-brand`, `x-guid`).
+- Elegida: plataforma pura. TLS/gzip/HTTP 1.1 bastan; coroutines ya vienen con Compose. Peticiones **en serie**, con exclusión en el cliente compartido. Backoff 2/4/8 s en 429/5xx solo para GET; los POST no se repiten automáticamente. Se rechazan redirecciones del backend y del login. El login usa PKCE aleatorio S256, contrastado con el APK oficial, y conserva las cabeceras existentes (`x-appversion`, `x-channel`, `x-client-ref`, `x-correlationid`, `x-region`, `x-user-region`, `x-brand`, `x-guid`). Ver [revisión REA](mytoyota-rea-review.md).
 
 ## 5. Almacenamiento: un fichero, sin base de datos
 

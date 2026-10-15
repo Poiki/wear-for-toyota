@@ -8,7 +8,7 @@ La versión 0.3.1 incluye gesto hacia arriba o toque en la foto del coche, resum
 
 La sesión y las cabeceras de `ToyotaApi` sirven para `GET /v1/trips?from=AAAA-MM-DD&to=AAAA-MM-DD&route=false&summary=true&limit=50&offset=0`. Se identifica el coche con la cabecera `vin`, igual que en las demás lecturas. El límite máximo documentado es 50; `_metadata.pagination.nextOffset` permite continuar. La respuesta contiene `payload.trips` y, cuando Toyota lo proporciona, `payload.summary` con agregados mensuales e histogramas diarios. [Cliente y parámetros de pytoyoda](https://pytoyoda.github.io/pytoyoda/pytoyoda/api.html).
 
-Primera implementación: últimos 30 días, una página de hasta 50 viajes, solo al abrir el historial; `route=false` evita descargar recorridos GPS innecesarios. Etiquetar el resultado como «Viajes recientes» y mostrar su cobertura. Una página no garantiza el mes completo. Para la siguiente iteración, consultar un mes natural y su resumen o paginar hasta completarlo.
+Primera implementación: últimos 30 días, una página de hasta 50 viajes, solo al abrir el historial; `route=false` evita pedir recorridos GPS completos, pero el modelo de resumen del APK 2.25.2 también contiene coordenadas de inicio y fin. Nuestro parser las descarta y no persiste la respuesta de viajes. Ver [contraste con REA](mytoyota-rea-review.md). Etiquetar el resultado como «Viajes recientes» y mostrar su cobertura. Una página no garantiza el mes completo. Para la siguiente iteración, consultar un mes natural y su resumen o paginar hasta completarlo.
 
 ## Qué necesitamos
 
@@ -48,7 +48,7 @@ Se ha contrastado el cliente actual con el código y los modelos de **pytoyoda, 
 | Notificaciones del coche | `GET /v2/notification/history` | Mensajes, categoría, fecha y estado de lectura. No hay método documentado para marcarlas como leídas. |
 | Historial de mantenimiento | `GET /v1/servicehistory/vehicle/summary` | Fechas, categoría y taller cuando estén disponibles. |
 | Datos de carga ampliados | `remainingChargeTime`, `evRangeWithAc`, `chargingSchedules`, `nextChargingEvent` | Información para eléctricos/PHEV; comprobar primero el endpoint válido. El cliente externo usa una ruta eléctrica diferente de la nuestra. |
-| Ajustes de climatización | `heatingOptions`, `seatOptions`, duración | Ya conservamos las opciones guardadas, pero no mostramos controles individuales. Se necesita validar capacidad y límites por vehículo. |
+| Ajustes de climatización | `heatingOptions`, `seatOptions`, duración | Controles individuales de desempañado, volante y asientos desde 0.3.3, filtrados por capacidades y ajustes reportados. Operación real y límites por vehículo pendientes de validar. |
 | Temperatura interior y estado del clima | `currentTemperature`, `startedAt`, `duration` | El GET actual puede traerlos mientras funciona. No confundir temperatura medida con la seleccionada ni presentar una cuenta atrás como estado confirmado. |
 | Localizar con luces o sonido | Órdenes `hazard-on/off`, `headlight-on/off`, `sound-horn`, `buzzer-warning` | Candidatas para una futura versión; la presencia en el enum no confirma soporte real. No se probaron órdenes al coche. |
 

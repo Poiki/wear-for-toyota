@@ -33,7 +33,14 @@ data class Snapshot(
     val climate: String?,
     val climateAt: Long?,
     val fetchedAt: Long,
+    /** Oldest reported lock component; unknown if any reported lock has no valid timestamp. */
+    val lockAt: Long? = null,
+    val climateCurrentC: Double? = null,
+    val climateEndsAt: Long? = null,
 ) {
+    fun confirmsLock(vin: String, lock: Boolean, sentAt: Long): Boolean =
+        this.vin == vin && locked == lock && statusAt?.let { it > sentAt } == true && lockAt?.let { it > sentAt } == true
+
     companion object {
         private val DOORS = listOf("driver", "passenger", "rearLeft", "rearRight", "rearBack")
         private val WINDOWS = listOf("driver", "passenger", "rearLeft", "rearRight")
@@ -59,7 +66,11 @@ data class Snapshot(
             val cl = raw.optJSONObject("climate")
             val doors = st?.optJSONObject("doors")
             val windows = st?.optJSONObject("windows")
-            val lockStates = DOORS.mapNotNull { doors?.optJSONObject(it)?.optJSONObject("lockStatus")?.optString("status")?.ifEmpty { null } }
+            val reportedDoors = DOORS.filter { doors?.has(it) == true }.map { doors?.optJSONObject(it) }
+            // An omitted component can be unsupported; an explicit unknown reading cannot confirm safety.
+            val lockReadings = reportedDoors.filter { it == null || it.has("lockStatus") }.map { it?.optJSONObject("lockStatus") }
+            val lockStates = lockReadings.map { it?.optString("status") }
+            val lockTimes = lockReadings.map(::timestamp)
             return Snapshot(
                 vin = v.getString("vin"),
                 alias = displayName(v),
@@ -72,11 +83,16 @@ data class Snapshot(
                 locked = when {
                     lockStates.isEmpty() -> null
                     lockStates.any { it == "unlocked" } -> false
-                    else -> true
+                    lockStates.all { it == "locked" } -> true
+                    else -> null
                 },
-                openDoors = doors?.let { d -> DOORS.count { d.optJSONObject(it)?.optJSONObject("openStatus")?.optString("status") == "open" } },
-                openWindows = windows?.let { w -> WINDOWS.count { w.optJSONObject(it)?.optString("status") == "open" } },
-                hoodOpen = doors?.optJSONObject("hood")?.optJSONObject("openStatus")?.optString("status")?.ifEmpty { null }?.let { it == "open" },
+                openDoors = openCount(reportedDoors.map { it?.optJSONObject("openStatus")?.optString("status") }),
+                openWindows = openCount(WINDOWS.filter { windows?.has(it) == true }.map { windows?.optJSONObject(it)?.optString("status") }),
+                hoodOpen = when (doors?.optJSONObject("hood")?.optJSONObject("openStatus")?.optString("status")) {
+                    "open" -> true
+                    "close" -> false
+                    else -> null
+                },
                 statusAt = timestamp(st),
                 odometerKm = te?.optJSONObject("odometer")?.let(::km),
                 fuelPct = percent(te, "fuelLevel") ?: percent(el, "fuelLevel"),
@@ -86,22 +102,36 @@ data class Snapshot(
                 evRangeKm = el?.optJSONObject("evRange")?.let(::km),
                 charging = el?.optString("chargingStatus")?.ifEmpty { null },
                 electricAt = el?.optString("lastUpdateTimestamp")?.let(::epoch),
-                lat = lo?.optDouble("latitude")?.takeIf { !it.isNaN() },
-                lon = lo?.optDouble("longitude")?.takeIf { !it.isNaN() },
+                lat = lo?.optDouble("latitude")?.takeIf { it.isFinite() && it in -90.0..90.0 },
+                lon = lo?.optDouble("longitude")?.takeIf { it.isFinite() && it in -180.0..180.0 },
                 locationAt = (lo?.optString("locationAcquisitionDatetime")?.ifEmpty { null }
                     ?: raw.optJSONObject("location")?.optString("lastTimestamp"))?.let(::epoch),
                 climate = cl?.optString("status")?.ifEmpty { null },
                 climateAt = cl?.optString("updatedAt")?.let(::epoch),
                 fetchedAt = raw.optLong("fetchedAt"),
+                lockAt = if (lockTimes.any { it == null }) null else lockTimes.filterNotNull().minOrNull(),
+                climateCurrentC = Climate.currentTemperature(cl),
+                climateEndsAt = Climate.endsAt(cl),
             )
         }
 
-        private fun percent(o: JSONObject?, key: String): Int? = o?.optInt(key, -1)?.takeIf { it >= 0 }
+        private fun openCount(states: List<String?>): Int? {
+            val count = states.count { it == "open" }
+            // Preserve known openings as a minimum count even when another reported reading is unknown.
+            return count.takeIf { it > 0 || (states.isNotEmpty() && states.all { state -> state == "close" }) }
+        }
+
+        private fun percent(o: JSONObject?, key: String): Int? =
+            o?.optDouble(key)?.takeIf { it.isFinite() && it in 0.0..100.0 }?.toInt()
 
         private fun km(o: JSONObject): Double? {
             val value = o.optDouble("value")
-            if (value.isNaN()) return null
-            return if (o.optString("unit") == "mi") value * 1.60934 else value
+            if (!value.isFinite() || value < 0) return null
+            return when (o.optString("unit")) {
+                "km" -> value
+                "mi" -> (value * 1.60934).takeIf { it.isFinite() }
+                else -> null
+            }
         }
 
         private fun epoch(iso: String): Long? = runCatching { Instant.parse(iso).toEpochMilli() }.getOrNull()

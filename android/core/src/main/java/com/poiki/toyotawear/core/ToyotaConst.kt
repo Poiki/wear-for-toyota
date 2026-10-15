@@ -18,7 +18,7 @@ internal object ToyotaConst {
 
     const val AUTHENTICATE = "$LOGIN_BASE/json/realms/root/realms/tme/authenticate?authIndexType=service&authIndexValue=oneapp"
     const val AUTHORIZE = "$LOGIN_BASE/oauth2/realms/root/realms/tme/authorize?client_id=oneapp&scope=openid+profile+write" +
-        "&response_type=code&redirect_uri=com.toyota.oneapp:/oauth2Callback&code_challenge=plain&code_challenge_method=plain"
+        "&response_type=code&redirect_uri=com.toyota.oneapp:/oauth2Callback"
     const val TOKEN = "$LOGIN_BASE/oauth2/realms/root/realms/tme/access_token"
 
     const val VEHICLES = "/v2/vehicle/guid"

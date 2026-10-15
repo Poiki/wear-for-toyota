@@ -24,8 +24,8 @@ Wear OS emulator screenshots with demonstration data. Scroll the trip list and d
 
 - **My Garage**: one card per car on the account, with Toyota's own picture of the car.
 - **Status dial**: locked / unlocked, fuel or battery with a compact red gauge beside the car, range, mileage, and when the car last reported (tap it to wake the car for fresh data). Opening a car shows a loading ring until Toyota answers, so you never see old data.
-- **Controls dial** (swipe left): lock, unlock, climate and the last parked position (opens the maps app on the watch). Unlocking asks for an on-screen confirmation. After every command the app wakes the car and verifies the real state before telling you "Vehicle locked".
-- **Climate**: a dial you turn with the crown or the +/- buttons (18–29 °C); start or stop for 10 minutes. **Climate options** shows supported defoggers, heated steering wheel and heated/ventilated seats. Tap to cycle a selection, then **Apply and start** to send everything together. This starts or restarts climate and uses a remote start; selections are not live status. Missing readback remains unconfirmed. These extras have been tested locally, without sending live vehicle commands.
+- **Controls dial** (swipe left): lock, unlock, climate and the last parked position (opens the maps app on the watch). Unlocking asks for an on-screen confirmation. After lock/unlock, the app wakes the car and verifies the real state before telling you "Vehicle locked".
+- **Climate**: a dial you turn with the crown or the +/- buttons (18–29 °C); start or stop for 10 minutes. **Climate options** shows supported defoggers, heated steering wheel and heated/ventilated seats. Tap to cycle a selection, then **Apply and start** to send everything together. This starts or restarts climate and uses a remote start; selections are not live status. After sending one command, the app requests fresh data and polls for a limited period: it confirms on/off, reports starting/stopping or shows a verification failure. Unreported extras are identified separately. The dial shows interior temperature and estimated remaining time when Toyota supplies those readings. These extras have been tested locally, without sending live vehicle commands.
 - **Trips and consumption** (swipe up or tap the car photo): up to 50 trips from the last 30 days, a distance-weighted fuel average and trip details. Distance, duration, fuel and average speed are shown; electric-distance share and Toyota score appear only when supplied. Coverage is explicit and missing values remain unknown. Includes a chart of up to 12 dated trips and an electric-distance bar when data is supplied.
 - **Standalone**: the watch talks to Toyota on its own over Wi-Fi or LTE, or through the Bluetooth proxy of the paired phone. The phone app is optional.
 - **Stays signed in**: Toyota's refresh token keeps the session alive. Optionally, save your password at sign-in (off by default, encrypted under its own key) and the watch signs in again by itself if Toyota ever ends the session.
@@ -106,6 +106,7 @@ The Windows launcher downloads readable script text and uses `RemoteSigned` for 
 - Europe only; other regions use different backends.
 - The API is unofficial. When Toyota changes it, the app needs an update; pytoyoda's issue tracker is the early-warning system.
 - Remote commands depend on your car and subscription. Climate runs for 10 minutes and Toyota caps the number of starts per ignition cycle.
+- Confirmation needs a fresh reading relative to the previous state. If Toyota does not respond, returns old data or provides insufficient evidence, the app reports that it could not verify the state; an accepted command does not guarantee execution.
 - Trip history depends on the data Toyota supplies for your account and vehicle. It reads one page of up to 50 trips; the average covers trips with valid data, not necessarily the full month. A live trip response for the development account has not yet been confirmed. Full-month comparisons and instantaneous consumption graphs are not included.
 - Not on Google Play: Play forbids password input on the watch, and an unofficial API would not pass review. Sideload only.
 
@@ -116,12 +117,14 @@ Each trip uses `100 × litres / kilometres`. The history average is `100 × tota
 ## Development
 
 - [Visual style](design.md) and [trip consumption research](docs/consumption.md). Trip history is included from 0.3.1.
+- [MyToyota REA analysis and 0.3.4 improvements](docs/mytoyota-rea-review.md).
 
 - `android/core`: Toyota client (login, refresh, reads, commands) and payload parsing, with unit tests on real fixtures: `./gradlew :core:testDebugUnitTest`.
 - `android/watch` and `android/phone`: the two apps. Compose for Wear OS Material 3; the phone app is a single screen.
 - Demo mode (debug builds only): `adb shell am start -n com.poiki.toyotawear/.MainActivity --ez demo true` seeds a fake car so you can work on the UI without an account.
 - `probe/probe.py`: read-only dump of what Toyota returns for an account (`uv run probe/probe.py`).
 - `docs/`: research on the Toyota API and authentication, the Wear OS stack, other manufacturers' watch apps, the technical decisions and the measurements.
+- [REA review of MyToyota 2.25.2](docs/mytoyota-rea-review.md) (Spanish): API declarations, implemented fixes, priorities and validation limits.
 - Bug reports and improvement ideas are welcome: open an issue or a pull request.
 
 ## Credits

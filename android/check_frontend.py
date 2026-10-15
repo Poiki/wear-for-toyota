@@ -78,6 +78,76 @@ def texts(tree):
     return [n.get('text') for n in tree.iter('node')]
 
 
+def check_climate_states():
+    for density in (320, 378):
+        adb('shell', 'wm', 'density', density)
+        for locale in ('en', 'es', 'de', 'fr', 'it', 'pt'):
+            folder = 'values' if locale == 'en' else 'values-' + locale
+            resources = ET.parse(ROOT / 'android/watch/src/main/res' / folder / 'strings.xml').getroot()
+            unknown = resources.find("string[@name='lock_unknown']").text
+            launch('climate', locale, '--es', 'climateState', 'unknown')
+            tree = dump()
+            assert unknown in texts(tree), (locale, texts(tree))
+            assert_safe_buttons(tree)
+            screenshot(f'climate-unknown-{density}-{locale}')
+        for state, label in [('running', 'On'), ('starting', 'Starting'), ('stopping', 'Stopping'), ('stopped', 'Off')]:
+            launch('climate', 'en', '--es', 'climateState', state)
+            assert label in texts(dump()), state
+        for state, label, enabled in [('stopped', 'Turn on', 'false'), ('running', 'Turn off', 'true')]:
+            launch('climate', 'en', '--es', 'climateState', state, '--ez', 'climateSettingsError', 'true')
+            assert button(dump(), label).get('enabled') == enabled, state
+        tap(button(dump(), 'Climate options'))
+        assert 'No connection.' in texts(dump())
+        print(f'OK climate unknown/transitions + settings failure: {density} dpi; no commands sent', flush=True)
+
+
+def check_release_034():
+    for density in (320, 378):
+        adb('shell', 'wm', 'density', density)
+        for locale in ('en', 'es', 'de', 'fr', 'it', 'pt'):
+            folder = 'values' if locale == 'en' else 'values-' + locale
+            resources = ET.parse(ROOT / 'android/watch/src/main/res' / folder / 'strings.xml').getroot()
+            launch('climate', locale, '--ez', 'climateDetails', 'true')
+            tree = dump()
+            interior = resources.find("string[@name='climate_interior']").text.split('%1$s')[0]
+            assert any(text and text.startswith(interior) and '°C' in text for text in texts(tree)), (locale, texts(tree))
+            assert not any(text and '°°' in text for text in texts(tree)), (locale, texts(tree))
+            remaining = resources.find("string[@name='climate_remaining']").text.replace('%1$d', '8')
+            assert any(text and remaining in text for text in texts(tree)), (locale, texts(tree))
+            assert_safe_buttons(tree)
+            screenshot(f'climate-details-{density}-{locale}')
+            print(f'OK interior temperature + remaining time: {locale}, {density} dpi', flush=True)
+
+        check_climate_feedback(density)
+
+    check_account_replacement()
+
+
+def check_climate_feedback(density):
+    # Finish the locale-triggered Activity recreation before timing a transient result.
+    launch('climate', 'es')
+    dump()
+    for message in ('Climatizador encendido', '!No se pudo comprobar el climatizador. Revisa MyToyota.'):
+        launch('climate', 'es', '--es', 'result', "'" + message + "'", '--ei', 'resultDelayMs', '8000')
+        time.sleep(10)
+        tree = dump()
+        assert message.removeprefix('!') in texts(tree), (message, texts(tree))
+        screenshot(f'climate-feedback-{density}-' + ('failure' if message.startswith('!') else 'success'))
+    print(f'OK climate result feedback: {density} dpi', flush=True)
+
+
+def check_account_replacement():
+    launch('vehicle', 'en')
+    assert '43%' in texts(dump())
+    adb('shell', 'run-as', PKG, 'sh', '-c', "'echo test > files/car-orphan.png'")
+    launch('garage', 'en', '--ez', 'relinkDemo', 'true')
+    assert not any(text and 'Corolla' in text for text in texts(dump()))
+    cache = adb('shell', 'run-as', PKG, 'cat', 'shared_prefs/cache.xml').decode()
+    assert 'raw:DEMO' not in cache and 'Corolla' not in cache and 'selected' not in cache, cache
+    assert 'car-orphan.png' not in adb('shell', 'run-as', PKG, 'ls', 'files').decode()
+    print('OK account replacement clears vehicle data and orphan images; no Toyota calls', flush=True)
+
+
 def check_climate_options():
     def reveal(label):
         for _ in range(24):
@@ -359,8 +429,19 @@ if __name__ == '__main__':
     assert adb('shell', 'getprop', 'ro.kernel.qemu').strip() == b'1'
     OUT.mkdir(parents=True, exist_ok=True)
     timeout = adb('shell', 'settings', 'get', 'system', 'screen_off_timeout').decode().strip()
+    feedback_timeouts = {key: adb('shell', 'settings', 'get', 'secure', key).decode().strip() for key in (
+        'accessibility_non_interactive_ui_timeout_ms', 'accessibility_interactive_ui_timeout_ms')}
     adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '600000')
     try:
+        if '--release-034' in sys.argv:
+            # UIAutomator can finish after a transient dialog; use the platform's accessibility reading time.
+            for key in feedback_timeouts:
+                adb('shell', 'settings', 'put', 'secure', key, '30000')
+            check_release_034()
+            sys.exit(0)
+        if '--climate-states' in sys.argv:
+            check_climate_states()
+            sys.exit(0)
         if '--climate-options' in sys.argv:
             check_climate_options()
             sys.exit(0)
@@ -431,4 +512,9 @@ if __name__ == '__main__':
     finally:
         adb('shell', 'wm', 'density', 'reset')
         adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', timeout)
+        for key, value in feedback_timeouts.items():
+            if value == 'null':
+                adb('shell', 'settings', 'delete', 'secure', key)
+            else:
+                adb('shell', 'settings', 'put', 'secure', key, value)
         adb('shell', 'am', 'force-stop', PKG)

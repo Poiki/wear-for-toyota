@@ -12,11 +12,9 @@ class TokenListenerService : WearableListenerService() {
         Store.init(this)
         runCatching {
             val json = String(event.data)
-            Store.saveTokens(Tokens.fromJson(json))
-            Store.error.value = null
             val o = JSONObject(json)
             // A locked watch refuses the strict key: the password is then not kept, and the app says so.
-            if (!Store.saveCredentials(o.optString("email"), o.optString("password").ifEmpty { null })) {
+            if (!Store.saveTokens(Tokens.fromJson(json), o.optString("email"), o.optString("password").ifEmpty { null })) {
                 Store.error.value = getString(R.string.err_save_password)
             }
         }

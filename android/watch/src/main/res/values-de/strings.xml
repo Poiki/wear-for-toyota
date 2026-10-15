@@ -130,4 +130,12 @@
     <string name="climate_selected">%1$s</string>
     <string name="climate_apply">Anwenden und starten</string>
     <string name="climate_options_hint">Antippen ändert die Auswahl.</string>
+    <string name="result_climate_options_unverified">Klima an. Toyota bestätigt nicht alle Einstellungen.</string>
+    <string name="result_climate_still_on">Die Klimaanlage ist noch an.</string>
+    <string name="result_climate_still_off">Die Klimaanlage ist noch aus.</string>
+    <string name="result_climate_starting">Die Klimaanlage startet noch.</string>
+    <string name="result_climate_stopping">Die Klimaanlage wird noch ausgeschaltet.</string>
+    <string name="result_climate_unavailable">Klimastatus nicht abrufbar. Bitte MyToyota prüfen.</string>
+    <string name="climate_interior">Innen %1$s°C</string>
+    <string name="climate_remaining">Noch %1$d Min.</string>
 </resources>

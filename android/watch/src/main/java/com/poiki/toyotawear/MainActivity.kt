@@ -65,8 +65,14 @@ class MainActivity : ComponentActivity() {
             if (intent.getBooleanExtra("demo", false)) {
                 // Local UI checks: no real Toyota commands or credentials required.
                 if (intent.getBooleanExtra("climateRunning", false)) Store.snapshot.value = Store.snapshot.value?.copy(climate = "running")
+                intent.getStringExtra("climateState")?.let { state -> Store.snapshot.value = Store.snapshot.value?.copy(climate = state) }
+                if (intent.getBooleanExtra("climateDetails", false)) Store.snapshot.value = Store.snapshot.value?.copy(
+                    climate = "running", climateCurrentC = 19.5, climateEndsAt = System.currentTimeMillis() + 8 * 60_000,
+                )
+                if (intent.getBooleanExtra("climateSettingsError", false)) Store.climateError.value = getString(R.string.err_offline)
                 if (intent.getBooleanExtra("doorOpen", false)) Store.snapshot.value = Store.snapshot.value?.copy(openDoors = 1)
                 intent.getStringExtra("busy")?.let { Store.busy.value = it }
+                if (intent.getBooleanExtra("relinkDemo", false)) Store.saveTokens(Tokens("demo", "demo-new", Long.MAX_VALUE, "demo-new-account", "T"))
             }
             // --es result "Vehículo cerrado" [--ei resultDelayMs 8000]: fakes a command outcome ("!" prefix = failure) to preview the dialogs.
             intent.getStringExtra("result")?.let { text ->
@@ -130,6 +136,7 @@ private enum class Route { Garage, Vehicle, Climate, Trips }
 @Composable
 private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, preview: String? = null) {
     val linked by Store.linked.collectAsState()
+    val session by Store.session.collectAsState()
     val error by Store.error.collectAsState()
     val busy by Store.busy.collectAsState()
     val result by Store.result.collectAsState()
@@ -152,7 +159,11 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
 
     LaunchedEffect(Unit) { Store.checkUpdate() }
     LaunchedEffect(update) { update?.let { offer = it } }
-    LaunchedEffect(linked) {
+    LaunchedEffect(linked, session) {
+        if (session > 0 && preview == null) {
+            stack.clear()
+            stack.add(Route.Garage)
+        }
         if (linked) {
             login = false
             Store.loadVehicles()
@@ -172,7 +183,7 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
         // One short fade between the three top-level states; nothing animates while idle.
         Crossfade(targetState = screen, animationSpec = tween(250), label = "screen") { target ->
             when (target) {
-                "app" -> Stack(stack, onMap, unlockGate) { about = true }
+                "app" -> Stack(stack, onMap, unlockGate, onClimateToggle = { start -> scope.launch { Store.climate(start) } }) { about = true }
                 "login" -> SwipeToDismissBox(onDismissed = { login = false }) { isBackground ->
                     if (isBackground) {
                         LinkScreen(error = null, onLoginHere = {}, onAbout = {})
@@ -225,10 +236,10 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
 
 /** Minimal back stack: the top screen slides over the previous one and swipes away to go back. */
 @Composable
-private fun Stack(stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Unit, unlockGate: () -> String?, onAbout: () -> Unit) {
+private fun Stack(stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Unit, unlockGate: () -> String?, onClimateToggle: (Boolean) -> Unit, onAbout: () -> Unit) {
     val top = stack.last()
     if (stack.size == 1) {
-        Screen(top, stack, onMap, unlockGate, onAbout)
+        Screen(top, stack, onMap, unlockGate, onClimateToggle, onAbout)
     } else {
         val below = stack[stack.size - 2]
         val dismissState = rememberSwipeToDismissBoxState()
@@ -239,14 +250,14 @@ private fun Stack(stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Un
         SwipeToDismissBox(onDismissed = { stack.removeAt(stack.size - 1) }, state = dismissState,
             userSwipeEnabled = !paged, backgroundKey = below, contentKey = top) { isBackground ->
             Box(if (paged && !isBackground) Modifier.edgeSwipeToDismiss(dismissState) else Modifier) {
-                Screen(if (isBackground) below else top, stack, onMap, unlockGate, onAbout)
+                Screen(if (isBackground) below else top, stack, onMap, unlockGate, onClimateToggle, onAbout)
             }
         }
     }
 }
 
 @Composable
-private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Unit, unlockGate: () -> String?, onAbout: () -> Unit) {
+private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double, Double) -> Unit, unlockGate: () -> String?, onClimateToggle: (Boolean) -> Unit, onAbout: () -> Unit) {
     val vehicles by Store.vehicles.collectAsState()
     val images by Store.carImages.collectAsState()
     val selectedVin by Store.selectedVin.collectAsState()
@@ -303,7 +314,7 @@ private fun Screen(route: Route, stack: SnapshotStateList<Route>, onMap: (Double
                 busy = busy,
                 error = error,
                 onTemp = Store::setClimateTemp,
-                onToggle = { start -> scope.launch { Store.climate(start) } },
+                onToggle = onClimateToggle,
             )
         }
         Route.Trips -> {

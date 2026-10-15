@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.4 — 2026-10-15
+
+- Replace the climate command's single delayed read with a fresh-status request and bounded polling. Confirm observed running/stopped states, report intermediate states or verification failures explicitly, and distinguish unverified extras from the confirmed climate state. Commands are never resent by the verification loop.
+- Show interior temperature and estimated remaining climate time when Toyota supplies the required readings. Keep confirmation messages visible for six seconds, with platform accessibility adjustments.
+- Clear the old account's vehicle cache, images and saved credentials on a new link; discard late responses from the previous session and reload the garage.
+- Renew once after a 401 and retry reads only. Keep token rotation within the same account and propagate authentication failures from optional reads.
+
+- Compared the local MyToyota 2.25.2 APK with the implementation using REA/JADX; documented evidence, API coverage and remaining priorities in `docs/mytoyota-rea-review.md`.
+- Use fresh S256 PKCE verifiers for login and validate the OAuth callback. Authentication and API requests reject redirects.
+- Retry only GET requests; serialize API calls and admit only one vehicle operation at a time.
+- Require fresh matching vehicle/component states to confirm door commands and fresh final states for climate commands. Unknown readings stay unknown; invalid measurements are omitted.
+- Build climate commands only from supported choices, remove redundant saved state, and block starts after a settings failure. Preserve the existing cockpit and translations.
+- Add regression, concurrency and emulator checks. Clarify that trip summaries may contain coordinates even without full routes; the app discards them.
+
 ## 0.3.3 — 2026-10-07
 
 - Climate options for front/rear defogging, heated steering wheel and all four seat positions. Heating and ventilation appear only when supported by the vehicle capabilities or reported settings; explicit unsupported flags are respected.

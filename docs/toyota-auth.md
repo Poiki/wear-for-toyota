@@ -6,7 +6,9 @@ Basado en el código de [pytoyoda `controller.py`](https://raw.githubusercontent
 
 ## 1. Flujo de login paso a paso
 
-Es el flujo estándar de **ForgeRock AM (OpenAM)**: autenticación JSON por *callbacks* → cookie de sesión SSO → OAuth2 *authorization code* (con PKCE trivial) → tokens. Todo son llamadas HTTPS JSON/form; **no hace falta navegador ni WebView**.
+Es el flujo de **ForgeRock AM (OpenAM)**: autenticación JSON por *callbacks* → cookie de sesión SSO → OAuth2 *authorization code* → tokens. Todo son llamadas HTTPS JSON/form; no hace falta navegador ni WebView para los callbacks de usuario y contraseña estudiados.
+
+Actualización del proyecto, 2026-10-15: el APK oficial 2.25.2 genera PKCE aleatorio S256. Nuestra implementación ya usa ese mecanismo, valida el callback y rechaza redirecciones en POST de autenticación. La tabla siguiente conserva el flujo histórico de pytoyoda con `plain`, no la implementación actual. El refresh actual no envía `code_verifier`. Ver [evidencia, pruebas y límites](mytoyota-rea-review.md#autenticación).
 
 | Paso | Petición | Detalle |
 |---|---|---|

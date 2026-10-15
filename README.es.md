@@ -24,8 +24,8 @@ Capturas del emulador Wear OS con datos de demostración. Desplaza la lista de v
 
 - **Mi Garaje**: una tarjeta por coche de la cuenta, con la imagen oficial de Toyota.
 - **Esfera de estado**: cerrado o abierto, combustible o batería con un indicador rojo compacto junto al coche, autonomía, kilometraje y cuándo informó el coche por última vez (tócalo para despertar al coche y pedir datos nuevos). Al abrir un coche se muestra un anillo de carga hasta que Toyota responde, así nunca ves datos viejos.
-- **Esfera de controles** (desliza a la izquierda): cerrar, abrir, climatizador y última posición aparcado (abre la app de mapas del reloj). Abrir pide confirmación en pantalla. Tras cada orden la app despierta al coche y verifica su estado real antes de decirte "Vehículo cerrado".
-- **Climatizador**: una esfera que giras con la corona o con los botones +/− (18–29 °C); encender o apagar durante 10 minutos. **Opciones de clima** muestra los desempañadores, el volante calefactado y los asientos con calefacción o ventilación compatibles. Toca para cambiar la selección y pulsa **Aplicar y encender** para enviarlo todo junto. Esto enciende o reinicia el climatizador y consume un arranque remoto; la selección no representa el estado real. Si falta la lectura de confirmación, queda sin confirmar. Los extras se han probado en local, sin enviar órdenes reales al coche.
+- **Esfera de controles** (desliza a la izquierda): cerrar, abrir, climatizador y última posición aparcado (abre la app de mapas del reloj). Abrir pide confirmación en pantalla. Tras cerrar o abrir, la app despierta al coche y verifica su estado real antes de decirte "Vehículo cerrado".
+- **Climatizador**: una esfera que giras con la corona o con los botones +/− (18–29 °C); encender o apagar durante 10 minutos. **Opciones de clima** muestra los desempañadores, el volante calefactado y los asientos con calefacción o ventilación compatibles. Toca para cambiar la selección y pulsa **Aplicar y encender** para enviarlo todo junto. Esto enciende o reinicia el climatizador y consume un arranque remoto; la selección no representa el estado real. Tras enviar una sola orden, la app pide datos nuevos y consulta el estado durante un periodo limitado: confirma encendido/apagado, informa si sigue arrancando/parando o muestra un fallo de verificación. Si Toyota no informa de los extras, lo indica por separado. La esfera muestra temperatura interior y tiempo restante estimado cuando Toyota aporta esos datos. Los extras se han probado en local, sin enviar órdenes reales al coche.
 - **Viajes y consumos** (desliza hacia arriba o toca la foto del coche): hasta 50 viajes de los últimos 30 días, media de consumo ponderada por distancia y detalle de cada trayecto. Muestra distancia, duración, combustible y velocidad media; porcentaje eléctrico y puntuación solo cuando Toyota los proporciona. Indica la cobertura y conserva los datos ausentes como desconocidos. Incluye un gráfico de hasta 12 viajes con fecha y una barra de distancia eléctrica cuando hay datos.
 - **Autónoma**: el reloj habla con Toyota por sí mismo por Wi-Fi o LTE, o a través del Bluetooth del móvil emparejado. La app de móvil es opcional.
 - **Mantiene la sesión**: el refresh token de Toyota mantiene la sesión. Si quieres, guarda la contraseña al iniciar sesión (desactivado por defecto, cifrada con su propia clave) y el reloj volverá a entrar solo si Toyota cierra la sesión.
@@ -106,6 +106,7 @@ El lanzador de Windows descarga el script como texto legible y usa `RemoteSigned
 - Solo Europa; otras regiones usan backends distintos.
 - La API no es oficial. Cuando Toyota la cambie, la app necesitará una actualización; las incidencias de pytoyoda son el sistema de alerta temprana.
 - Los comandos remotos dependen del coche y de la suscripción. El climatizador funciona 10 minutos y Toyota limita los arranques por ciclo de contacto.
+- La confirmación necesita una lectura nueva respecto al estado previo. Si Toyota no responde, devuelve datos antiguos o no aporta evidencia suficiente, la app muestra que no pudo comprobar el estado; una orden aceptada no garantiza su ejecución.
 - El historial depende de los datos que Toyota devuelva para tu cuenta y coche. Consulta una página de hasta 50 viajes; la media corresponde a los viajes con datos, no necesariamente al mes completo. La respuesta real de viajes de la cuenta de desarrollo aún no se ha confirmado. No incluye comparación mensual ni gráfico de consumo instantáneo.
 - No está en Google Play: Play prohíbe introducir contraseñas en el reloj y una API no oficial no pasaría la revisión. Solo instalación manual.
 
@@ -116,12 +117,14 @@ Cada viaje usa `100 × litros / kilómetros`. La media del historial es `100 × 
 ## Desarrollo
 
 - [Guía de estilo](design.md) e [investigación de consumos](docs/consumption.md). El historial está incluido desde la 0.3.1.
+- [Análisis de MyToyota con REA y mejoras de la 0.3.4](docs/mytoyota-rea-review.md).
 
 - `android/core`: cliente Toyota (login, refresh, lecturas, comandos) y parseo de respuestas, con tests unitarios sobre fixtures reales: `./gradlew :core:testDebugUnitTest`.
 - `android/watch` y `android/phone`: las dos apps. Compose for Wear OS Material 3; la app de móvil es una sola pantalla.
 - Modo demo (solo builds debug): `adb shell am start -n com.poiki.toyotawear/.MainActivity --ez demo true` siembra un coche ficticio para trabajar en la interfaz sin cuenta.
 - `probe/probe.py`: volcado de solo lectura de lo que Toyota devuelve para una cuenta (`uv run probe/probe.py`).
 - `docs/`: investigación sobre la API y la autenticación de Toyota, el stack de Wear OS, las apps de reloj de otros fabricantes, las decisiones técnicas y las mediciones.
+- [Revisión con REA de MyToyota 2.25.2](docs/mytoyota-rea-review.md): APIs contrastadas, mejoras implementadas, prioridades y límites de validación.
 - Los informes de fallos y las ideas de mejora son bienvenidos: abre una incidencia o un pull request.
 
 ## Créditos

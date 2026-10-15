@@ -1,6 +1,6 @@
 # Privacy Policy — Wear for Toyota
 
-Last updated: 2026-10-03 (version 0.2.0). [Versión en español más abajo.](#política-de-privacidad--wear-para-toyota)
+Last updated: 2026-10-15. [Versión en español más abajo.](#política-de-privacidad--wear-para-toyota)
 
 Wear for Toyota is an unofficial, open-source app that lets you see and control your Toyota or Lexus car from a Wear OS watch. It is not affiliated with Toyota.
 
@@ -13,12 +13,14 @@ Nothing. The app has no analytics, no crash reporting, no advertising and no ser
 - Your MyToyota email and password are sent over HTTPS to Toyota's own login service (`b2c-login.toyota-europe.com`) to obtain access tokens. By default the password is used only for that request and is not stored. If you turn on "Save password", it is kept encrypted on the watch (see below) and sent to the same service again only when Toyota ends your session.
 - Vehicle data (lock state, range, fuel or battery, mileage, climate, last parked position) and remote commands travel only between your watch (or the optional phone app) and Toyota's servers (`*.toyotaconnectedeurope.io`), exactly as with the official MyToyota app.
 - The picture of your car is downloaded once from Toyota's image CDN.
+- When you open trips, the watch requests up to 50 recent trips without full GPS routes. Toyota's trip summaries may still include start/end coordinates; the app discards those fields and keeps only dates, distances, durations, fuel and supplied driving metrics in memory. Trip history is not saved to disk.
 - Update check: at most once a day, when you open the app, the watch asks GitHub (`api.github.com`) for the latest release of this project. If you accept an update, the APK is downloaded from GitHub. No account or identifier is sent; GitHub sees your IP address, as with any web request.
 
 ## What the app stores on your devices
 
 - On the watch: the Toyota access and refresh tokens, encrypted with a key held in the Android Keystore; your MyToyota email and password only if you turned on "Save password", encrypted with a separate 256-bit Keystore key (in StrongBox when the watch has one) that works only while the watch is unlocked, if it has a screen lock; the list of your cars and the last data read from Toyota, including the last parked position; the picture of your car. Backups are disabled. A saved password is deleted as soon as Toyota rejects it.
 - On the phone (optional app): nothing. It only forwards the tokens to the watch over the Bluetooth link, plus your email and password if you chose to save them on the watch.
+- Linking a session again clears the previous session's vehicle cache, pictures and saved credentials. Late replies from the previous session cannot repopulate that cache. Routine token renewal keeps the current account's data.
 - Tapping "Unlink" in the watch app deletes everything the app stored.
 
 ## Third parties
@@ -37,7 +39,7 @@ Questions or concerns: open an issue at https://github.com/Poiki/wear-for-toyota
 
 # Política de privacidad — Wear para Toyota
 
-Última actualización: 3 de octubre de 2026 (versión 0.2.0).
+Última actualización: 15 de octubre de 2026.
 
 Wear para Toyota es una app no oficial y de código abierto que permite ver y controlar tu Toyota o Lexus desde un reloj Wear OS. No está afiliada a Toyota.
 
@@ -50,12 +52,14 @@ Nada. La app no tiene analítica, ni informes de fallos, ni publicidad, ni servi
 - Tu email y contraseña de MyToyota se envían por HTTPS al servicio de inicio de sesión de Toyota (`b2c-login.toyota-europe.com`) para obtener los tokens de acceso. Por defecto la contraseña solo se usa en esa petición y no se guarda. Si activas "Guardar contraseña", se conserva cifrada en el reloj (ver más abajo) y solo se vuelve a enviar a ese mismo servicio cuando Toyota cierra tu sesión.
 - Los datos del vehículo (cierre, autonomía, combustible o batería, kilometraje, climatizador, última posición aparcado) y los comandos remotos viajan únicamente entre tu reloj (o la app opcional del móvil) y los servidores de Toyota (`*.toyotaconnectedeurope.io`), igual que con la app oficial MyToyota.
 - La imagen de tu coche se descarga una vez del CDN de imágenes de Toyota.
+- Al abrir viajes, el reloj pide hasta 50 trayectos recientes sin recorridos GPS completos. Los resúmenes de Toyota pueden incluir coordenadas de inicio y fin; la app descarta esos campos y conserva en memoria solo fechas, distancias, duraciones, combustible y métricas de conducción disponibles. El historial no se guarda en disco.
 - Búsqueda de actualizaciones: como mucho una vez al día, al abrir la app, el reloj pregunta a GitHub (`api.github.com`) por la última release de este proyecto. Si aceptas una actualización, el APK se descarga de GitHub. No se envía ninguna cuenta ni identificador; GitHub ve tu dirección IP, como en cualquier petición web.
 
 ## Qué guarda la app en tus dispositivos
 
 - En el reloj: los tokens de acceso y refresco de Toyota, cifrados con una clave que vive en el Android Keystore; tu email y contraseña de MyToyota solo si activaste "Guardar contraseña", cifrados con otra clave de 256 bits del Keystore (en StrongBox si el reloj lo tiene) que solo funciona con el reloj desbloqueado, si tiene bloqueo de pantalla; la lista de tus coches y los últimos datos leídos de Toyota, incluida la última posición aparcado; la imagen de tu coche. Las copias de seguridad están desactivadas. La contraseña guardada se borra en cuanto Toyota la rechaza.
 - En el móvil (app opcional): nada. Solo reenvía los tokens al reloj por el enlace Bluetooth y, si elegiste guardarlos en el reloj, tu email y contraseña.
+- Vincular una sesión de nuevo borra la caché de vehículos, las imágenes y las credenciales guardadas de la sesión anterior. Sus respuestas pendientes no pueden repoblar esa caché. La renovación habitual de tokens conserva los datos de la cuenta activa.
 - Pulsar "Desvincular" en la app del reloj borra todo lo que la app guardó.
 
 ## Terceros

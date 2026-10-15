@@ -3,6 +3,7 @@ package com.poiki.toyotawear.core
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import java.util.concurrent.CancellationException
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -10,17 +11,33 @@ import javax.crypto.spec.SecretKeySpec
  * MyToyota EU backend: reads, the "wake" request and the remote commands. Blocking; one request at a
  * time (Toyota's gateway rate-limits bursts). [tokens] must return fresh tokens, refreshing if needed.
  */
-class ToyotaApi(private val tokens: () -> Tokens) {
+class ToyotaApi internal constructor(
+    private val tokens: () -> Tokens,
+    private val renew: ((Tokens) -> Tokens)?,
+    private val request: (String, String, Map<String, String>, ByteArray?, Boolean, Int) -> HttpResult,
+) {
+    constructor(tokens: () -> Tokens, renew: ((Tokens) -> Tokens)? = null) : this(tokens, renew, { method, url, headers, body, redirects, timeout ->
+        Http.request(method, url, headers, body, redirects, timeout)
+    })
+
+    @Volatile private var active = true
+
+    fun invalidate() { active = false }
+
+    fun checkActive() { if (!active) throw CancellationException("Toyota session changed") }
 
     fun vehicles(): JSONArray = call("GET", ToyotaConst.VEHICLES, null).getJSONArray("payload")
     fun status(vin: String): JSONObject = payload("GET", ToyotaConst.STATUS, vin)
     fun telemetry(vin: String): JSONObject = payload("GET", ToyotaConst.TELEMETRY, vin)
     fun electric(vin: String): JSONObject = payload("GET", ToyotaConst.ELECTRIC, vin)
     fun location(vin: String): JSONObject = payload("GET", ToyotaConst.LOCATION, vin)
-    fun climateStatus(vin: String): JSONObject = payload("GET", ToyotaConst.CLIMATE_STATUS, vin)
+    fun climateStatus(vin: String, timeoutMs: Int = 20_000, retry: Boolean = true): JSONObject =
+        call("GET", ToyotaConst.CLIMATE_STATUS, vin, retry = retry, timeoutMs = timeoutMs).getJSONObject("payload")
+
+    fun refreshClimateStatus(vin: String) { call("POST", "/v1/remote/refresh-climate-status", vin) }
     /** One recent page, without GPS routes or a wake/remote command. */
     fun trips(vin: String): TripHistory {
-        // ponytail: first 50 trips only; follow nextOffset when full-period comparisons are added.
+        // shortcut: first 50 trips only; follow nextOffset when full-period comparisons are added.
         val today = java.time.LocalDate.now()
         return TripHistory.from(payload("GET", "/v1/trips?from=${today.minusDays(29)}&to=$today&route=false&summary=true&limit=50&offset=0", vin))
     }
@@ -46,13 +63,28 @@ class ToyotaApi(private val tokens: () -> Tokens) {
 
     private fun payload(method: String, path: String, vin: String): JSONObject = call(method, path, vin).getJSONObject("payload")
 
-    private fun call(method: String, path: String, vin: String?, body: String? = null): JSONObject {
+    @Synchronized
+    private fun call(method: String, path: String, vin: String?, body: String? = null, retry: Boolean = true, timeoutMs: Int = 20_000): JSONObject {
         var backoffMs = 2_000L
+        var renewed = false
         val bytes = body?.toByteArray() ?: if (method == "POST") ByteArray(0) else null
         while (true) {
-            val r = Http.request(method, ToyotaConst.API_BASE + path, headers(vin), bytes)
+            checkActive()
+            val t = tokens()
+            checkActive()
+            val r = request(method, ToyotaConst.API_BASE + path, headers(vin, t), bytes, false, timeoutMs)
+            checkActive()
             if (r.code in 200..299) return if (r.body.isBlank()) JSONObject() else JSONObject(r.body)
-            if ((r.code == 429 || r.code >= 500) && backoffMs <= 8_000) { // 2 s, 4 s, 8 s like pytoyoda
+            if (r.code == 401 && renew != null) {
+                if (renewed) throw ToyotaLoginError("Toyota rejected the renewed session")
+                val next = renew.invoke(t)
+                checkActive()
+                if (next.uuid != t.uuid || next.brand != t.brand) throw ToyotaLoginError("Toyota session identity changed")
+                renewed = true
+                if (method == "GET") continue
+            }
+            // A command may have reached the car even when the gateway reports an error.
+            if (retry && method == "GET" && (r.code == 429 || r.code >= 500) && backoffMs <= 8_000) {
                 Thread.sleep(backoffMs)
                 backoffMs *= 2
                 continue
@@ -65,8 +97,7 @@ class ToyotaApi(private val tokens: () -> Tokens) {
         JSONObject(body).getJSONObject("status").getJSONArray("messages").getJSONObject(0).getString("responseCode")
     }.getOrNull()
 
-    private fun headers(vin: String?): Map<String, String> {
-        val t = tokens()
+    private fun headers(vin: String?, t: Tokens): Map<String, String> {
         val h = mutableMapOf(
             "x-api-key" to ToyotaConst.API_KEY,
             "API_KEY" to ToyotaConst.API_KEY,

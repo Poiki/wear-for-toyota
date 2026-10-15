@@ -41,6 +41,7 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
@@ -416,7 +417,8 @@ fun ResultDialogs(result: Store.CommandResult?) {
     ConfirmationDialog(
         visible = pending,
         onDismissRequest = { shown = result?.at },
-        text = { Text(result?.text ?: "", textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium) },
+        durationMillis = 6_000L,
+        text = { Text(result?.text ?: "", textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, maxLines = 4) },
         colors = if (ok) ConfirmationDialogDefaults.successColors(iconColor = Color.White, iconContainerColor = Color(0xFF3B0710), textColor = Color.White) else ConfirmationDialogDefaults.failureColors(),
     ) {
         NeonGauge({ if (ok) 1f else .25f }, Modifier.size(76.dp)) {
@@ -433,6 +435,16 @@ fun ClimateScreen(
 ) {
     val running = snapshot?.climate == "running" || snapshot?.climate == "starting"
     val loading by Store.climateLoading.collectAsState()
+    val settingsError by Store.climateError.collectAsState()
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(snapshot?.climateEndsAt) {
+        now = System.currentTimeMillis()
+        while (snapshot?.climateEndsAt?.let { it > now } == true) {
+            kotlinx.coroutines.delay(15_000)
+            now = System.currentTimeMillis()
+        }
+    }
+    val remaining = Climate.remainingMinutes(snapshot?.climateEndsAt, now)
     var options by remember { mutableStateOf(false) }
     val lowerTemperature = stringResource(R.string.temperature_down)
     val higherTemperature = stringResource(R.string.temperature_up)
@@ -471,7 +483,8 @@ fun ClimateScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(painterResource(R.drawable.ic_thermostat), contentDescription = null, tint = NeonRed, modifier = Modifier.size(17.dp))
                     FitText(tempText(temp) + "C", TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold), Color.White, Modifier.width(74.dp), minFontSize = 18.sp)
-                    Text("${Store.TEMP_MIN.toInt()} – ${Store.TEMP_MAX.toInt()} °C", fontSize = 8.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(snapshot?.climateCurrentC?.let { stringResource(R.string.climate_interior, tempText(it).removeSuffix("°")) }
+                        ?: "${Store.TEMP_MIN.toInt()} – ${Store.TEMP_MAX.toInt()} °C", fontSize = 8.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if (!running) {
@@ -484,9 +497,16 @@ fun ClimateScreen(
             }
             Row(Modifier.align(Alignment.TopCenter).offset(y = 153.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(painterResource(R.drawable.ic_fan), contentDescription = null, modifier = Modifier.size(12.dp), tint = if (running) NeonRed else Color(0xFFADB1B8))
-                Text(stringResource(if (running) R.string.climate_on else R.string.climate_off), fontSize = 9.sp, lineHeight = 11.sp, modifier = Modifier.padding(start = 4.dp))
+                Text(stringResource(when (snapshot?.climate) {
+                    "running" -> R.string.climate_on
+                    "starting" -> R.string.climate_starting
+                    "stopping" -> R.string.climate_stopping
+                    "stopped" -> R.string.climate_off
+                    else -> R.string.lock_unknown
+                }) + (remaining?.let { " · " + stringResource(R.string.climate_remaining, it) } ?: ""),
+                    fontSize = 9.sp, lineHeight = 11.sp, modifier = Modifier.padding(start = 4.dp))
             }
-            Button(onClick = { onToggle(!running) }, enabled = busy == null && !loading && snapshot?.remoteActive == true,
+            Button(onClick = { onToggle(!running) }, enabled = busy == null && !loading && (running || settingsError == null) && snapshot?.remoteActive == true,
                 contentPadding = PaddingValues(horizontal = 10.dp),
                 modifier = Modifier.size(132.dp, 40.dp).align(Alignment.TopCenter).offset(y = 171.dp).neonSurface(active = true),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent)) {
@@ -499,7 +519,7 @@ fun ClimateScreen(
         }
     }
     Dialog(visible = options, onDismissRequest = { options = false }) {
-        ClimateOptionsScreen(canApply = snapshot?.remoteActive == true && busy == null,
+        ClimateOptionsScreen(canApply = snapshot?.remoteActive == true && busy == null && settingsError == null,
             onApply = { options = false; onToggle(true) })
     }
     ErrorNotice(error) { Store.error.value = null }

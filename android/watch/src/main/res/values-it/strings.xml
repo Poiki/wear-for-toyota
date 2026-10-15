@@ -130,4 +130,12 @@
     <string name="climate_selected">%1$s</string>
     <string name="climate_apply">Applica e avvia</string>
     <string name="climate_options_hint">Tocca per cambiare la selezione.</string>
+    <string name="result_climate_options_unverified">Clima acceso. Toyota non conferma tutte le impostazioni.</string>
+    <string name="result_climate_still_on">Il climatizzatore è ancora acceso.</string>
+    <string name="result_climate_still_off">Il climatizzatore è ancora spento.</string>
+    <string name="result_climate_starting">Il climatizzatore si sta avviando.</string>
+    <string name="result_climate_stopping">Il climatizzatore si sta spegnendo.</string>
+    <string name="result_climate_unavailable">Impossibile verificare il clima. Controlla MyToyota.</string>
+    <string name="climate_interior">Abitacolo %1$s°C</string>
+    <string name="climate_remaining">Restano %1$d min</string>
 </resources>
