@@ -14,8 +14,8 @@ android {
         applicationId = "com.poiki.toyotawear"
         minSdk = 30
         targetSdk = 37
-        versionCode = 8
-        versionName = "0.3.4"
+        versionCode = 9
+        versionName = "0.3.5"
     }
     // Same optional release key as the watch: both APKs must share one signature for the Data Layer.
     val keystore = rootProject.file("keystore.properties")

@@ -186,12 +186,12 @@ class CoreTest {
 
         val release = JSONObject(
             """{"tag_name":"v0.2.0","assets":[
-                {"name":"wear-for-toyota-phone-0.2.0.apk","browser_download_url":"https://x/phone.apk"},
-                {"name":"wear-for-toyota-watch-0.2.0.apk","browser_download_url":"https://x/watch.apk"}]}""",
+                {"name":"wear-for-toyota-phone-0.2.0.apk","browser_download_url":"https://github.com/Poiki/wear-for-toyota/releases/download/v0.2.0/phone.apk"},
+                {"name":"wear-for-toyota-watch-0.2.0.apk","browser_download_url":"https://github.com/Poiki/wear-for-toyota/releases/download/v0.2.0/watch.apk"}]}""",
         )
         val apk = Releases.pick(release, "0.1.0", "wear-for-toyota-watch")!!
         assertEquals("0.2.0", apk.version)
-        assertEquals("https://x/watch.apk", apk.url)
+        assertEquals("https://github.com/Poiki/wear-for-toyota/releases/download/v0.2.0/watch.apk", apk.url)
         assertNull(Releases.pick(release, "0.2.0", "wear-for-toyota-watch"))
     }
 }

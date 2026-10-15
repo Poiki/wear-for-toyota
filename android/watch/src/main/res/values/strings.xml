@@ -138,4 +138,17 @@
     <string name="result_climate_unavailable">Could not check the climate state. Check MyToyota.</string>
     <string name="climate_interior">Cabin %1$s°C</string>
     <string name="climate_remaining">%1$d min left</string>
+    <string name="update_downloading">Downloading update</string>
+    <string name="update_eta">Estimated time: ~%1$d:%2$02d</string>
+    <string name="update_estimating">Estimating time…</string>
+    <string name="update_size_unknown">Time unavailable</string>
+    <string name="update_preparing">Preparing installation…</string>
+    <string name="update_confirm">Confirm installation in Android.</string>
+    <string name="update_failed_title">Update failed</string>
+    <string name="update_interrupted">The update was interrupted. Download it again to continue.</string>
+    <string name="update_download_failed">Could not download or verify the APK. Check your connection and free space.</string>
+    <string name="update_cleanup_failed">Could not clear an earlier installation. Restart the watch and try again.</string>
+    <string name="update_install_unavailable">Could not open the Android installer on this watch.</string>
+    <string name="update_space_failed">Not enough space to install. Free some space and try again.</string>
+    <string name="update_install_failed">Android could not install this update. Check compatibility and installation permission.</string>
 </resources>

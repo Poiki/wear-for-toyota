@@ -138,4 +138,17 @@
     <string name="result_climate_unavailable">Não foi possível verificar a climatização. Consulte MyToyota.</string>
     <string name="climate_interior">Interior %1$s°C</string>
     <string name="climate_remaining">Faltam %1$d min</string>
+    <string name="update_downloading">A descarregar atualização</string>
+    <string name="update_eta">Tempo estimado: ~%1$d:%2$02d</string>
+    <string name="update_estimating">A calcular o tempo…</string>
+    <string name="update_size_unknown">Tempo indisponível</string>
+    <string name="update_preparing">A preparar instalação…</string>
+    <string name="update_confirm">Confirme a instalação no Android.</string>
+    <string name="update_failed_title">Falha na atualização</string>
+    <string name="update_interrupted">A atualização foi interrompida. Descarregue-a novamente para continuar.</string>
+    <string name="update_download_failed">Não foi possível descarregar ou verificar o APK. Verifique a ligação e o espaço livre.</string>
+    <string name="update_cleanup_failed">Não foi possível limpar uma instalação anterior. Reinicie o relógio e tente novamente.</string>
+    <string name="update_install_unavailable">Não foi possível abrir o instalador Android neste relógio.</string>
+    <string name="update_space_failed">Espaço insuficiente. Liberte espaço e tente novamente.</string>
+    <string name="update_install_failed">O Android não instalou a atualização. Verifique a compatibilidade e a permissão de instalação.</string>
 </resources>

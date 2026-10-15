@@ -30,6 +30,7 @@ Capturas del emulador Wear OS con datos de demostración. Desplaza la lista de v
 - **Autónoma**: el reloj habla con Toyota por sí mismo por Wi-Fi o LTE, o a través del Bluetooth del móvil emparejado. La app de móvil es opcional.
 - **Mantiene la sesión**: el refresh token de Toyota mantiene la sesión. Si quieres, guarda la contraseña al iniciar sesión (desactivado por defecto, cifrada con su propia clave) y el reloj volverá a entrar solo si Toyota cierra la sesión.
 - **Información** (botón del garaje o de la pantalla de inicio): versión instalada, búsqueda manual de actualizaciones y borrado de sesión, contraseña guardada y datos del coche, con confirmación. La búsqueda manual no espera al intervalo de 24 horas.
+- **Actualizaciones**: descarga visible con porcentaje y tiempo restante estimado, seguida de la confirmación de Android. La app no guarda una segunda copia del APK y limpia sus sesiones interrumpidas y los instaladores temporales propios. Las descargas manuales en carpetas públicas siguen bajo tu control.
 - **Se actualiza sola**: como mucho una vez al día, al abrirla, el reloj busca una release nueva en GitHub y te ofrece instalarla.
 - **Pensada para la batería**: sin sondeos en segundo plano, sin servicios, un único fichero de estado cifrado. Solo se despierta al coche cuando tú lo pides.
 

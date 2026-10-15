@@ -138,4 +138,17 @@
     <string name="result_climate_unavailable">État de climatisation indisponible. Vérifiez MyToyota.</string>
     <string name="climate_interior">Habitacle %1$s°C</string>
     <string name="climate_remaining">Reste %1$d min</string>
+    <string name="update_downloading">Téléchargement en cours</string>
+    <string name="update_eta">Temps estimé : ~%1$d:%2$02d</string>
+    <string name="update_estimating">Calcul du temps…</string>
+    <string name="update_size_unknown">Temps indisponible</string>
+    <string name="update_preparing">Préparation de l’installation…</string>
+    <string name="update_confirm">Confirmez l’installation dans Android.</string>
+    <string name="update_failed_title">Échec de la mise à jour</string>
+    <string name="update_interrupted">La mise à jour a été interrompue. Téléchargez-la à nouveau pour continuer.</string>
+    <string name="update_download_failed">Impossible de télécharger ou vérifier l’APK. Vérifiez la connexion et l’espace libre.</string>
+    <string name="update_cleanup_failed">Impossible de nettoyer une installation précédente. Redémarrez la montre et réessayez.</string>
+    <string name="update_install_unavailable">Impossible d’ouvrir l’installateur Android sur cette montre.</string>
+    <string name="update_space_failed">Espace insuffisant. Libérez de l’espace et réessayez.</string>
+    <string name="update_install_failed">Android ne peut pas installer cette mise à jour. Vérifiez la compatibilité et l’autorisation d’installation.</string>
 </resources>

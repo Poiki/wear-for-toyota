@@ -30,6 +30,7 @@ Wear OS emulator screenshots with demonstration data. Scroll the trip list and d
 - **Standalone**: the watch talks to Toyota on its own over Wi-Fi or LTE, or through the Bluetooth proxy of the paired phone. The phone app is optional.
 - **Stays signed in**: Toyota's refresh token keeps the session alive. Optionally, save your password at sign-in (off by default, encrypted under its own key) and the watch signs in again by itself if Toyota ever ends the session.
 - **About app** (garage or sign-in screen): installed version, manual update check and confirmed removal of the session, saved password and vehicle data. Manual checks bypass the daily interval.
+- **Updates**: visible download percentage and estimated remaining time, followed by Android confirmation. The app keeps no second APK copy and cleans interrupted sessions and its own temporary installers. Manually downloaded files in public folders remain under your control.
 - **Updates itself**: at most once a day, when you open it, the watch looks for a new release on GitHub and offers to install it.
 - **Battery-friendly by design**: no background polling, no services, one small encrypted state file. The car is only woken when you ask.
 

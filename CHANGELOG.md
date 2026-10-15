@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5 — 2026-10-15
+
+- Show update download progress above About/sign-in, with the actual byte percentage, estimated remaining time and separate Android installation stages. Unknown sizes stay indeterminate.
+- Open Android's confirmation from the resumed Activity. Show download, storage and installer failures on every screen, and cancel the owned installation session when the user cancels.
+- Stream directly into the install session, verify the reported size and SHA-256 when supplied, and reject ambiguous APK assets or unexpected release URLs.
+- Clean interrupted self-update sessions and known installer filenames in this app's private storage; preserve credentials, vehicle data and public downloads. Report interrupted updates explicitly and ignore late callbacks from cancelled sessions.
+- Add byte/ETA, integrity and cleanup regression tests, round-screen UI checks, and actual Android self-install/cancel/process-death checks on an emulator. OnePlus Watch 4 hardware validation remains pending.
+
 ## 0.3.4 — 2026-10-15
 
 - Replace the climate command's single delayed read with a fresh-status request and bounded polling. Confirm observed running/stopped states, report intermediate states or verification failures explicitly, and distinguish unverified extras from the confirmed climate state. Commands are never resent by the verification loop.

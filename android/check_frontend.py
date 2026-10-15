@@ -78,6 +78,99 @@ def texts(tree):
     return [n.get('text') for n in tree.iter('node')]
 
 
+def check_update_install():
+    def no_active_installer():
+        package_dump = adb('shell', 'dumpsys', 'package').decode()
+        assert 'Active install sessions:' in package_dump
+        active = package_dump.split('Active install sessions:')[1].split('Historical install sessions:')[0]
+        assert 'appPackageName=com.poiki.toyotawear' not in active, active[:1800]
+
+    def offer(stage='offer'):
+        launch('about', 'es', '--es', 'updatePreview', stage)
+        time.sleep(2)
+        tap(button(dump(), 'Confirmar'))
+        time.sleep(2)
+
+    adb('shell', 'appops', 'set', PKG, 'REQUEST_INSTALL_PACKAGES', 'allow')
+    offer()
+    assert 'UPDATE' in texts(dump())
+    tap(button(dump(), 'CANCEL'))
+    time.sleep(2)
+    assert 'Confirma la instalación en Android.' not in texts(dump())
+    no_active_installer()
+    print('OK real Android confirmation + cancellation + staged data removed', flush=True)
+
+    offer()
+    assert 'UPDATE' in texts(dump())
+    tap(button(dump(), 'UPDATE'))
+    time.sleep(5)
+    launch('about', 'es')
+    assert any(text and '0.3.5' in text for text in texts(dump()))
+    no_active_installer()
+    print('OK real self-install completes and installed app opens without a staged APK', flush=True)
+
+    offer()
+    assert 'UPDATE' in texts(dump())
+    pid = adb('shell', 'pidof', PKG).decode().split()[0]
+    adb('shell', 'run-as', PKG, 'kill', '-9', pid)
+    adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity', '--ez', 'demo', 'true', '--es', 'preview', 'about', '--es', 'locale', 'es')
+    time.sleep(3)
+    tree = dump()
+    if 'UPDATE' in texts(tree):
+        # Android can retain its own confirmation even after the app process dies.
+        tap(button(tree, 'UPDATE'))
+        time.sleep(5)
+        launch('about', 'es')
+        assert any(text and '0.3.5' in text for text in texts(dump()))
+    else:
+        assert 'Error al actualizar' in texts(tree)
+        assert any(text and 'interrump' in text for text in texts(tree))
+    no_active_installer()
+    print('OK process death leaves system confirmation usable or reports interruption explicitly', flush=True)
+
+    offer('broken-offer')
+    assert 'Error al actualizar' in texts(dump())
+    no_active_installer()
+    print('OK actual download failure is visible and cleans its install session', flush=True)
+
+    adb('shell', 'run-as', PKG, 'sh', '-c', "'echo fixture > cache/update.apk; echo fixture > files/wear-for-toyota-watch-0.1.0.apk; echo keep > files/keep-update-fixture.txt'")
+    launch('about', 'es', '--ez', 'staleUpdate', 'true')
+    assert 'Error al actualizar' in texts(dump())
+    assert b'update.apk' not in adb('shell', 'run-as', PKG, 'ls', 'cache')
+    files = adb('shell', 'run-as', PKG, 'ls', 'files')
+    assert b'wear-for-toyota-watch-0.1.0.apk' not in files and b'keep-update-fixture.txt' in files
+    no_active_installer()
+    print('OK interrupted native session reported, old private installers removed, other data preserved', flush=True)
+
+    launch('about', 'es', '--es', 'updatePreview', 'late-failure')
+    assert 'Error al actualizar' not in texts(dump())
+    print('OK late terminal callback after cancellation is ignored', flush=True)
+    adb('shell', 'run-as', PKG, 'rm', 'files/keep-update-fixture.txt')
+
+
+def check_updater():
+    for density in (320, 378):
+        adb('shell', 'wm', 'density', density)
+        for locale in ('en', 'es', 'de', 'fr', 'it', 'pt'):
+            folder = 'values' if locale == 'en' else 'values-' + locale
+            resources = ET.parse(ROOT / 'android/watch/src/main/res' / folder / 'strings.xml').getroot()
+            launch('about', locale, '--es', 'updatePreview', 'download')
+            tree = dump()
+            assert '60%' in texts(tree), (locale, texts(tree))
+            assert resources.find("string[@name='update_downloading']").text in texts(tree), (locale, texts(tree))
+            assert any(text and '0:08' in text for text in texts(tree)), (locale, texts(tree))
+            assert_safe_buttons(tree)
+            screenshot(f'update-download-{density}-{locale}')
+            print(f'OK visible download above About, percentage + ETA: {locale}, {density} dpi', flush=True)
+        for stage, key in [('unknown', 'update_size_unknown'), ('preparing', 'update_preparing'), ('installing', 'update_confirm'), ('failure', 'update_failed_title')]:
+            launch('about', 'es', '--es', 'updatePreview', stage)
+            tree = dump()
+            resources = ET.parse(ROOT / 'android/watch/src/main/res/values-es/strings.xml').getroot()
+            assert resources.find(f"string[@name='{key}']").text in texts(tree), (stage, texts(tree))
+            screenshot(f'update-{stage}-{density}')
+        print(f'OK unknown length, preparing, system confirmation and visible failure: {density} dpi', flush=True)
+
+
 def check_climate_states():
     for density in (320, 378):
         adb('shell', 'wm', 'density', density)
@@ -431,8 +524,15 @@ if __name__ == '__main__':
     timeout = adb('shell', 'settings', 'get', 'system', 'screen_off_timeout').decode().strip()
     feedback_timeouts = {key: adb('shell', 'settings', 'get', 'secure', key).decode().strip() for key in (
         'accessibility_non_interactive_ui_timeout_ms', 'accessibility_interactive_ui_timeout_ms')}
+    install_mode = re.search(r'REQUEST_INSTALL_PACKAGES: (\w+)', adb('shell', 'appops', 'get', PKG, 'REQUEST_INSTALL_PACKAGES').decode())
     adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '600000')
     try:
+        if '--updater-install' in sys.argv:
+            check_update_install()
+            sys.exit(0)
+        if '--updater' in sys.argv:
+            check_updater()
+            sys.exit(0)
         if '--release-034' in sys.argv:
             # UIAutomator can finish after a transient dialog; use the platform's accessibility reading time.
             for key in feedback_timeouts:
@@ -518,3 +618,5 @@ if __name__ == '__main__':
             else:
                 adb('shell', 'settings', 'put', 'secure', key, value)
         adb('shell', 'am', 'force-stop', PKG)
+        if '--updater-install' in sys.argv:
+            adb('shell', 'appops', 'set', PKG, 'REQUEST_INSTALL_PACKAGES', install_mode.group(1) if install_mode else 'default')

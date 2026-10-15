@@ -34,6 +34,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.wear.compose.foundation.edgeSwipeToDismiss
 import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
 import androidx.wear.compose.material3.AlertDialog
@@ -64,6 +66,11 @@ class MainActivity : ComponentActivity() {
             if (intent.getBooleanExtra("demo", false)) Store.seedDemo() // adb shell am start -n …/.MainActivity --ez demo true
             if (intent.getBooleanExtra("demo", false)) {
                 // Local UI checks: no real Toyota commands or credentials required.
+                if (intent.getBooleanExtra("staleUpdate", false)) {
+                    val params = android.content.pm.PackageInstaller.SessionParams(android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+                        .apply { setAppPackageName(packageName) }
+                    packageManager.packageInstaller.createSession(params)
+                }
                 if (intent.getBooleanExtra("climateRunning", false)) Store.snapshot.value = Store.snapshot.value?.copy(climate = "running")
                 intent.getStringExtra("climateState")?.let { state -> Store.snapshot.value = Store.snapshot.value?.copy(climate = state) }
                 if (intent.getBooleanExtra("climateDetails", false)) Store.snapshot.value = Store.snapshot.value?.copy(
@@ -73,6 +80,26 @@ class MainActivity : ComponentActivity() {
                 if (intent.getBooleanExtra("doorOpen", false)) Store.snapshot.value = Store.snapshot.value?.copy(openDoors = 1)
                 intent.getStringExtra("busy")?.let { Store.busy.value = it }
                 if (intent.getBooleanExtra("relinkDemo", false)) Store.saveTokens(Tokens("demo", "demo-new", Long.MAX_VALUE, "demo-new-account", "T"))
+                intent.getStringExtra("updatePreview")?.let { stage ->
+                    lifecycleScope.launch {
+                        delay(1_500)
+                        val source = java.io.File(applicationInfo.sourceDir)
+                        val apk = Releases.Apk("0.3.5", source.toURI().toString(), source.length())
+                        when (stage) {
+                            "offer", "broken-offer" -> Store.update.value = if (stage == "broken-offer") Releases.Apk(apk.version, apk.url + ".missing", apk.size) else apk
+                            "unknown" -> Store.installation.value = Store.Installation(apk, progress = Releases.DownloadProgress(50_000, null, 12_000))
+                            "preparing" -> Store.installation.value = Store.Installation(apk, Store.UpdatePhase.Preparing)
+                            "installing" -> Store.installation.value = Store.Installation(apk, Store.UpdatePhase.Installing)
+                            "failure" -> Store.updateFailed(apk, getString(R.string.update_download_failed))
+                            "late-failure" -> {
+                                Store.cancelUpdate()
+                                Store.installStatus(Intent().putExtra(android.content.pm.PackageInstaller.EXTRA_SESSION_ID, 123456)
+                                    .putExtra(android.content.pm.PackageInstaller.EXTRA_STATUS, android.content.pm.PackageInstaller.STATUS_FAILURE_STORAGE))
+                            }
+                            else -> Store.installation.value = Store.Installation(apk, progress = Releases.DownloadProgress(60_000, 100_000, 12_000))
+                        }
+                    }
+                }
             }
             // --es result "Vehículo cerrado" [--ei resultDelayMs 8000]: fakes a command outcome ("!" prefix = failure) to preview the dialogs.
             intent.getStringExtra("result")?.let { text ->
@@ -84,6 +111,17 @@ class MainActivity : ComponentActivity() {
         }
         val preview = if (debug && intent.getBooleanExtra("demo", false)) intent.getStringExtra("preview") else null
         setContent { ToyotaTheme { App(onMap = ::openMap, unlockGate = ::unlockGate, preview = preview) } }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                Store.installation.collect {
+                    Store.takeInstallConfirmation()?.let { confirmation ->
+                        try { startActivity(confirmation) } catch (_: Exception) {
+                            Store.updateFailed(it?.apk, getString(R.string.update_install_unavailable))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun openMap(lat: Double, lon: Double) {
@@ -141,7 +179,7 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
     val busy by Store.busy.collectAsState()
     val result by Store.result.collectAsState()
     val update by Store.update.collectAsState()
-    val updating by Store.updating.collectAsState()
+    val installation by Store.installation.collectAsState()
     val context = LocalContext.current
     val installPermissionError = stringResource(R.string.err_install_permission)
     val scope = rememberCoroutineScope()
@@ -157,7 +195,7 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
         }
     }
 
-    LaunchedEffect(Unit) { Store.checkUpdate() }
+    LaunchedEffect(Unit) { Store.cleanUpdateInstallers(); Store.checkUpdate() }
     LaunchedEffect(update) { update?.let { offer = it } }
     LaunchedEffect(linked, session) {
         if (session > 0 && preview == null) {
@@ -207,7 +245,6 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
                 about = false
             })
         }
-        if (updating) WaitFace(car = null, text = stringResource(R.string.busy_update), working = true)
         offer?.let { apk ->
             AlertDialog(
                 visible = update != null,
@@ -216,13 +253,14 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
                     AlertDialogDefaults.ConfirmButton(onClick = {
                         if (context.packageManager.canRequestPackageInstalls()) {
                             Store.update.value = null
+                            about = false
                             scope.launch { Store.installUpdate(apk) }
                         } else {
                             // One-time "Install unknown apps" switch for this app; the offer stays up for when the user comes back.
                             runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))) }
                                 .onFailure {
                                     Store.update.value = null
-                                    Store.error.value = installPermissionError
+                                    Store.updateFailed(apk, installPermissionError)
                                 }
                         }
                     })
@@ -231,6 +269,17 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
                 text = { Text(stringResource(R.string.update_text)) },
             )
         }
+        // Dialogs stay above About/sign-in; update failures must be visible on every route.
+        Dialog(visible = installation?.active == true, onDismissRequest = { Store.cancelUpdate() }) {
+            installation?.let { UpdateScreen(it, onCancel = { Store.cancelUpdate() }) }
+        }
+        AlertDialog(
+            visible = installation?.phase == Store.UpdatePhase.Failed,
+            onDismissRequest = { Store.cancelUpdate() },
+            title = { Text(stringResource(R.string.update_failed_title)) },
+            text = { Text(installation?.error ?: "") },
+            confirmButton = { AlertDialogDefaults.ConfirmButton(onClick = { Store.cancelUpdate() }) },
+        )
     }
 }
 

@@ -38,6 +38,11 @@ import java.net.URL
  */
 object Store {
     data class CommandResult(val at: Long, val text: String, val ok: Boolean)
+    enum class UpdatePhase { Downloading, Preparing, Confirm, Installing, Failed }
+    data class Installation(
+        val apk: Releases.Apk?, val phase: UpdatePhase = UpdatePhase.Downloading,
+        val progress: Releases.DownloadProgress? = null, val confirmation: Intent? = null, val error: String? = null,
+    ) { val active: Boolean get() = phase != UpdatePhase.Failed }
 
     /** Tokens are on the watch. They are only decrypted for the first request: the Keystore costs ~60 ms at startup. */
     val linked = MutableStateFlow(false)
@@ -59,8 +64,8 @@ object Store {
     val result = MutableStateFlow<CommandResult?>(null)
     /** A newer watch APK on GitHub, offered once per check. */
     val update = MutableStateFlow<Releases.Apk?>(null)
-    /** The update APK is downloading. */
-    val updating = MutableStateFlow(false)
+    val installation = MutableStateFlow<Installation?>(null)
+    val updating: Boolean get() = installation.value?.active == true
     val updateChecking = MutableStateFlow(false)
     val updateStatus = MutableStateFlow<String?>(null)
 
@@ -77,6 +82,8 @@ object Store {
 
     @Volatile private var tokens: Tokens? = null
     private val tokenRefreshLock = Any()
+    private val installLock = Any()
+    private var installSessionId: Int? = null
     private lateinit var app: Context
     private lateinit var vault: Vault
     /** The saved password, only if the user asked for it: its own strict Keystore key. */
@@ -549,40 +556,124 @@ object Store {
         }
     }
 
-    /**
-     * Streams the APK straight into a PackageInstaller session. Android only accepts it if it is this app, signed
-     * with the same key and not older; then it asks the user to confirm and restarts the app ([InstallReceiver]).
-     */
-    suspend fun installUpdate(apk: Releases.Apk) = withContext(Dispatchers.IO) {
-        if (updating.value) return@withContext
-        updating.value = true
+    /** Abandon only this app's own self-update sessions and known private installer filenames. */
+    suspend fun cleanUpdateInstallers() = withContext(Dispatchers.IO) {
+        synchronized(installLock) {
+            if (!updating) try {
+                val interrupted = app.packageManager.packageInstaller.mySessions.any { it.appPackageName == app.packageName }
+                cleanInstallers()
+                if (interrupted) installation.value = Installation(null, UpdatePhase.Failed, error = app.getString(R.string.update_interrupted))
+            } catch (e: Exception) {
+                Log.w("ToyotaWear", "Update cleanup failed: ${e.javaClass.simpleName}")
+                installation.value = Installation(null, UpdatePhase.Failed, error = app.getString(R.string.update_cleanup_failed))
+            }
+        }
+    }
+
+    private fun cleanInstallers() {
         val installer = app.packageManager.packageInstaller
-        val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply { setAppPackageName(app.packageName) }
+        installer.mySessions.filter { it.appPackageName == app.packageName }.forEach { abandonInstall(it.sessionId) }
+        listOfNotNull(app.filesDir, app.cacheDir, app.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), app.externalCacheDir)
+            .forEach(Releases::cleanInstallers)
+    }
+
+    private fun abandonInstall(id: Int) {
+        val installer = app.packageManager.packageInstaller
+        if (installer.getSessionInfo(id)?.appPackageName != app.packageName) return
+        try { installer.abandonSession(id) } catch (e: IllegalArgumentException) {
+            if (installer.getSessionInfo(id) != null) throw e // The session may have finished between the two calls.
+        }
+    }
+
+    /** Called by the foreground Activity, never by the broadcast receiver. */
+    fun takeInstallConfirmation(): Intent? = synchronized(installLock) {
+        val state = installation.value ?: return@synchronized null
+        val confirmation = state.confirmation ?: return@synchronized null
+        installation.value = state.copy(phase = UpdatePhase.Installing, confirmation = null)
+        confirmation
+    }
+
+    fun cancelUpdate() = synchronized(installLock) {
+        installSessionId?.let(::abandonInstall)
+        installSessionId = null
+        installation.value = null
+    }
+
+    fun updateFailed(apk: Releases.Apk?, message: String) = synchronized(installLock) {
+        installSessionId?.let(::abandonInstall)
+        installSessionId = null
+        installation.value = Installation(apk, UpdatePhase.Failed, error = message)
+    }
+
+    /** Streams once to Android's install session; the system verifies package, signature and version. */
+    suspend fun installUpdate(apk: Releases.Apk) = withContext(Dispatchers.IO) {
+        val coroutine = currentCoroutineContext()
+        val installer = app.packageManager.packageInstaller
+        val id = synchronized(installLock) {
+            if (updating) return@withContext
+            installation.value = Installation(apk, progress = Releases.DownloadProgress(0, apk.size, 0))
+            try {
+                cleanInstallers()
+                val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+                    setAppPackageName(app.packageName)
+                    apk.size?.let(::setSize)
+                }
+                installer.createSession(params).also { installSessionId = it }
+            } catch (e: Exception) {
+                Log.w("ToyotaWear", "Update preparation failed: ${e.javaClass.simpleName}")
+                updateFailed(apk, app.getString(R.string.update_cleanup_failed))
+                return@withContext
+            }
+        }
         try {
-            installer.openSession(installer.createSession(params)).use { session ->
-                try {
-                    val download = URL(apk.url).openConnection().apply {
-                        connectTimeout = 20_000
-                        readTimeout = 20_000
-                    }
-                    download.getInputStream().use { input ->
-                        session.openWrite("update.apk", 0, -1).use { out ->
-                            input.copyTo(out)
-                            session.fsync(out)
+            installer.openSession(id).use { session ->
+                session.openWrite("update.apk", 0, apk.size ?: -1).use { out ->
+                    Releases.download(apk, out) { progress ->
+                        coroutine.ensureActive()
+                        synchronized(installLock) {
+                            if (installSessionId != id) throw CancellationException("Update cancelled")
+                            installation.value = Installation(apk, progress = progress)
                         }
+                        session.setStagingProgress((progress.percent ?: 0) / 100f)
                     }
-                    val status = PendingIntent.getBroadcast(app, 0, Intent(app, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                    session.fsync(out)
+                }
+                synchronized(installLock) {
+                    if (installSessionId != id) throw CancellationException("Update cancelled")
+                    installation.value = installation.value?.copy(phase = UpdatePhase.Preparing)
+                    val status = PendingIntent.getBroadcast(app, id, Intent(app, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
                     session.commit(status.intentSender)
-                } catch (e: Exception) {
-                    session.abandon()
-                    throw e
                 }
             }
+        } catch (e: CancellationException) {
+            synchronized(installLock) { if (installSessionId == id) cancelUpdate() }
+            throw e
         } catch (e: Exception) {
-            Log.w("ToyotaWear", "update failed: ${e.javaClass.simpleName}: ${e.message}")
-            error.value = app.getString(R.string.err_update, humanize(e))
-        } finally {
-            updating.value = false
+            Log.w("ToyotaWear", "Update failed: ${e.javaClass.simpleName}")
+            synchronized(installLock) { if (installSessionId == id) updateFailed(apk, app.getString(R.string.update_download_failed)) }
+        }
+    }
+
+    fun installStatus(intent: Intent) = synchronized(installLock) {
+        val id = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
+        if (id < 0 || (installSessionId != null && installSessionId != id)) return@synchronized
+        val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        if (id != installSessionId && status != PackageInstaller.STATUS_PENDING_USER_ACTION) return@synchronized
+        val state = installation.value
+        when (status) {
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                if (app.packageManager.packageInstaller.mySessions.none { it.sessionId == id && it.appPackageName == app.packageName }) return@synchronized
+                @Suppress("DEPRECATION")
+                val confirmation = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+                installSessionId = id
+                if (confirmation == null) updateFailed(state?.apk, app.getString(R.string.update_install_unavailable))
+                else installation.value = Installation(state?.apk, UpdatePhase.Confirm, state?.progress, confirmation)
+            }
+            PackageInstaller.STATUS_SUCCESS, PackageInstaller.STATUS_FAILURE_ABORTED -> cancelUpdate()
+            else -> updateFailed(state?.apk, app.getString(when (status) {
+                PackageInstaller.STATUS_FAILURE_STORAGE -> R.string.update_space_failed
+                else -> R.string.update_install_failed
+            }))
         }
     }
 
@@ -604,13 +695,7 @@ object Store {
 /** PackageInstaller reports here (not exported, so nobody else can feed it intents): system confirmation, or why it failed. */
 class InstallReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
-            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.let { context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }
-            PackageInstaller.STATUS_SUCCESS, PackageInstaller.STATUS_FAILURE_ABORTED -> Unit // installed (the app restarts) or the user said no
-            else -> Store.error.value = context.getString(R.string.err_update, intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "")
-        }
+        Store.init(context)
+        Store.installStatus(intent)
     }
 }

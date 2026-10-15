@@ -138,4 +138,17 @@
     <string name="result_climate_unavailable">Klimastatus nicht abrufbar. Bitte MyToyota prüfen.</string>
     <string name="climate_interior">Innen %1$s°C</string>
     <string name="climate_remaining">Noch %1$d Min.</string>
+    <string name="update_downloading">Update wird geladen</string>
+    <string name="update_eta">Geschätzte Zeit: ~%1$d:%2$02d</string>
+    <string name="update_estimating">Zeit wird berechnet…</string>
+    <string name="update_size_unknown">Zeit nicht verfügbar</string>
+    <string name="update_preparing">Installation wird vorbereitet…</string>
+    <string name="update_confirm">Installation in Android bestätigen.</string>
+    <string name="update_failed_title">Update fehlgeschlagen</string>
+    <string name="update_interrupted">Das Update wurde unterbrochen. Zum Fortfahren erneut herunterladen.</string>
+    <string name="update_download_failed">APK konnte nicht geladen oder geprüft werden. Verbindung und freien Speicher prüfen.</string>
+    <string name="update_cleanup_failed">Frühere Installation konnte nicht bereinigt werden. Uhr neu starten und erneut versuchen.</string>
+    <string name="update_install_unavailable">Android-Installer konnte auf dieser Uhr nicht geöffnet werden.</string>
+    <string name="update_space_failed">Nicht genug Speicher. Speicher freigeben und erneut versuchen.</string>
+    <string name="update_install_failed">Android konnte das Update nicht installieren. Kompatibilität und Installationsberechtigung prüfen.</string>
 </resources>

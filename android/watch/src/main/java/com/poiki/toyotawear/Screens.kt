@@ -408,6 +408,34 @@ fun WaitFace(car: Bitmap?, text: String, working: Boolean, actions: @Composable 
     }
 }
 
+/** Byte-based download progress; Android's confirmation is a separate installation phase. */
+@Composable
+fun UpdateScreen(state: Store.Installation, onCancel: () -> Unit) {
+    val downloading = state.phase == Store.UpdatePhase.Downloading
+    val percent = state.progress?.percent
+    val remaining = state.progress?.remainingSeconds
+    Dial {
+        Box(Modifier.fillMaxSize().cockpit(), contentAlignment = Alignment.Center) {
+            if (downloading && percent != null) CircularProgressIndicator(
+                progress = { percent / 100f }, modifier = Modifier.fillMaxSize().padding(3.dp), strokeWidth = 6.dp,
+            ) else CircularProgressIndicator(modifier = Modifier.fillMaxSize().padding(3.dp), strokeWidth = 6.dp)
+            Column(Modifier.width(170.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                BrandHeader()
+                Text(stringResource(if (downloading) R.string.update_downloading else if (state.phase == Store.UpdatePhase.Preparing) R.string.update_preparing else R.string.update_confirm),
+                    fontSize = 12.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+                if (downloading) {
+                    Text(percent?.let { "$it%" } ?: "—", fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold)
+                    Text(if (percent == null) stringResource(R.string.update_size_unknown) else if (remaining == null) stringResource(R.string.update_estimating) else stringResource(R.string.update_eta, remaining / 60, remaining % 60),
+                        fontSize = 11.sp, lineHeight = 14.sp, textAlign = TextAlign.Center)
+                }
+                OutlinedButton(onClick = onCancel, modifier = Modifier.width(128.dp).height(40.dp).padding(top = 5.dp)) {
+                    Text(stringResource(R.string.cancel), fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
 /** Full-screen, self-dismissing confirmation of the last command: a check or a cross with the outcome text. */
 @Composable
 fun ResultDialogs(result: Store.CommandResult?) {
