@@ -1,5 +1,6 @@
 """Local cockpit check; requires the debug APK installed on a Wear OS emulator.
 Run: python android/check_frontend.py [emulator-5554]
+--updater-live also needs Pillow to measure the red rim in captured frames.
 Screenshots stay in ignored notes/. Never sends a vehicle command.
 """
 from pathlib import Path
@@ -76,6 +77,114 @@ def screenshot(name):
 
 def texts(tree):
     return [n.get('text') for n in tree.iter('node')]
+
+
+def check_update_foreground():
+    def checked_at():
+        cache = ET.fromstring(adb('shell', 'run-as', PKG, 'cat', 'shared_prefs/cache.xml'))
+        return int(next((n.get('value') for n in cache if n.get('name') == 'updateCheckedAt'), '0'))
+
+    def wait_for_check(previous):
+        for _ in range(25):
+            if checked_at() > previous:
+                return
+            time.sleep(1)
+        raise AssertionError('Opening the app must check GitHub even after a recent successful check')
+
+    previous = checked_at()
+    launch('garage', 'es')
+    wait_for_check(previous)
+    previous = checked_at()
+    launch('garage', 'es')
+    wait_for_check(previous)
+    previous = checked_at()
+    adb('shell', 'input', 'keyevent', 'KEYCODE_HOME')
+    time.sleep(2)
+    adb('shell', 'am', 'start', '-n', PKG + '/.MainActivity')
+    wait_for_check(previous)
+    print('OK GitHub checked on cold launch and foreground return despite a recent check', flush=True)
+
+
+def check_update_live():
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from io import BytesIO
+    from queue import Empty, Queue
+    from threading import Thread
+    from PIL import Image
+
+    apk = ROOT / 'android/watch/build/outputs/apk/debug/watch-debug.apk'
+    reached, advance = Queue(), Queue()
+
+    class SlowApk(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-Length', str(apk.stat().st_size))
+            self.end_headers()
+            try:
+                with apk.open('rb') as source:
+                    for _ in range(3):
+                        for _ in range(25):
+                            self.wfile.write(source.read(max(1, apk.stat().st_size // 100)))
+                            self.wfile.flush()
+                            time.sleep(.04)
+                        # Pause network updates so UIAutomator can wait for an idle frame.
+                        reached.put(True)
+                        if not advance.get(timeout=18):
+                            return
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, Empty):
+                pass  # Cancellation closes this emulator-only HTTP download.
+
+        def log_message(self, *_):
+            pass
+
+    def red_arc_fraction(png):
+        image = Image.open(BytesIO(png)).convert('RGB')
+        cx, cy = image.width / 2, image.height / 2
+        radius = min(cx, cy) - 12
+        red = 0
+        for degree in range(360):
+            angle = math.radians(degree)
+            r, g, b = image.getpixel((round(cx + radius * math.cos(angle)), round(cy + radius * math.sin(angle))))
+            red += r > 160 and g < 110 and b < 140
+        return red / 360
+
+    server = ThreadingHTTPServer(('127.0.0.1', 0), SlowApk)
+    port = server.server_address[1]
+    Thread(target=server.serve_forever, daemon=True).start()
+    adb('reverse', f'tcp:{port}', f'tcp:{port}')
+    adb('shell', 'appops', 'set', PKG, 'REQUEST_INSTALL_PACKAGES', 'allow')
+    try:
+        for density in (320, 378):
+            adb('shell', 'wm', 'density', density)
+            launch('about', 'es', '--es', 'updatePreview', 'offer', '--es', 'updateUrl', f'http://127.0.0.1:{port}/update.apk')
+            time.sleep(2)
+            tap(button(dump(), 'Confirmar'))
+            samples = []
+            for sample in range(3):
+                reached.get(timeout=20)
+                time.sleep(1)
+                tree = dump()
+                percent = next((int(t[:-1]) for t in texts(tree) if t and re.fullmatch(r'\d+%', t)), None)
+                assert percent is not None, texts(tree)
+                png = adb('exec-out', 'screencap', '-p')
+                (OUT / f'update-live-{density}-{sample}.png').write_bytes(png)
+                arc = red_arc_fraction(png)
+                assert abs(arc - percent / 100) < .12, ('Red rim must follow live bytes', percent, arc)
+                samples.append((percent, arc))
+                if sample < 2:
+                    advance.put(True)
+            assert samples[-1][0] - samples[0][0] >= 15, samples
+            assert samples[-1][1] - samples[0][1] >= .15, samples
+            tap(button(dump(), 'Cancelar'))
+            advance.put(False)
+            assert not any(t and re.fullmatch(r'\d+%', t) for t in texts(dump()))
+            print(f'OK real throttled APK download: text and red rim advance together; cancel works ({density} dpi): {samples}', flush=True)
+    finally:
+        advance.put(False)
+        adb('shell', 'am', 'force-stop', PKG)
+        adb('reverse', '--remove', f'tcp:{port}')
+        server.shutdown()
+        server.server_close()
 
 
 def check_update_install():
@@ -430,7 +539,7 @@ def check_about():
                 else:
                     raise AssertionError(('Manual update check failed',texts(tree)))
                 after = ET.fromstring(adb('shell','run-as',PKG,'cat','shared_prefs/cache.xml'))
-                assert int(next(n.get('value') for n in after if n.get('name') == 'updateCheckedAt')) > int(checked_at), 'Manual check must bypass daily cache'
+                assert int(next(n.get('value') for n in after if n.get('name') == 'updateCheckedAt')) > int(checked_at), 'Manual check must fetch GitHub again'
                 screenshot('about-update-result-378-es')
             tap(reveal(labels['about_clear']))
             tree = dump()
@@ -530,6 +639,12 @@ if __name__ == '__main__':
     install_mode = re.search(r'REQUEST_INSTALL_PACKAGES: (\w+)', adb('shell', 'appops', 'get', PKG, 'REQUEST_INSTALL_PACKAGES').decode())
     adb('shell', 'settings', 'put', 'system', 'screen_off_timeout', '600000')
     try:
+        if '--updater-foreground' in sys.argv:
+            check_update_foreground()
+            sys.exit(0)
+        if '--updater-live' in sys.argv:
+            check_update_live()
+            sys.exit(0)
         if '--updater-install' in sys.argv:
             check_update_install()
             sys.exit(0)
@@ -621,5 +736,5 @@ if __name__ == '__main__':
             else:
                 adb('shell', 'settings', 'put', 'secure', key, value)
         adb('shell', 'am', 'force-stop', PKG)
-        if '--updater-install' in sys.argv:
+        if '--updater-install' in sys.argv or '--updater-live' in sys.argv:
             adb('shell', 'appops', 'set', PKG, 'REQUEST_INSTALL_PACKAGES', install_mode.group(1) if install_mode else 'default')

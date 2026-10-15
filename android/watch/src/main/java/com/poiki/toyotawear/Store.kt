@@ -76,7 +76,6 @@ object Store {
     private const val CAR_IMAGE_WIDTH = 320
     private const val CREDENTIALS = "credentials"
     private const val WATCH_APK = "wear-for-toyota-watch"
-    private const val UPDATE_CHECK_MS = 24 * 3600_000L
     /** Data read this recently (e.g. prefetched while the garage was showing) is shown at once; older data never is. */
     private const val FRESH_MS = 2 * 60_000L
 
@@ -536,17 +535,17 @@ object Store {
         }
     }
 
-    /** Automatic checks wait a day after GitHub replies; manual checks bypass that interval and report errors. */
+    /** Check whenever the app enters the foreground; manual checks also report network failures. */
     suspend fun checkUpdate(force: Boolean = false) = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        if (!force && now - cache.getLong("updateCheckedAt", 0) < UPDATE_CHECK_MS) return@withContext
+        if (updating || update.value != null) return@withContext
         if (!updateChecking.compareAndSet(false, true)) return@withContext
         if (force) updateStatus.value = null
         try {
             val current = app.packageManager.getPackageInfo(app.packageName, 0).versionName ?: return@withContext
             val newer = Releases.newer(current, WATCH_APK)
             cache.edit().putLong("updateCheckedAt", now).apply()
-            update.value = newer
+            if (!updating) update.compareAndSet(null, newer)
             updateStatus.value = if (newer == null) app.getString(R.string.about_up_to_date)
                 else app.getString(R.string.update_title, newer.version)
         } catch (_: Exception) {

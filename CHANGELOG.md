@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.7 — 2026-10-15
+
+- Keep the red download rim in sync with the live percentage instead of capturing its initial value.
+- Check for updates on each foreground entry, including reopening an existing app. Remove the 24-hour suppression and preserve an open offer or active installation.
+- Add real throttled-download visual checks and startup/foreground regressions. The local HTTP fixture is debug-only; release downloads still use HTTPS.
+- Align the optional phone APK version; no phone behavior changes.
+
 ## 0.3.6 — 2026-10-15
 
 - Add 8 dp of space between the vehicle card and About button in the garage. Preserve photo/text sizes and keep the controls within the round screen.

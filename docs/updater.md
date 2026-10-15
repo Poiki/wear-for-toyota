@@ -1,5 +1,19 @@
 # Actualizador 0.3.5
 
+## Correcciones 0.3.7
+
+Se reprodujo una descarga real con el texto al 26 % y el aro vacío. La vista fija al 60 % usada en 0.3.5 no detectaba el fallo: la lambda del indicador conservaba el porcentaje inicial. `UpdateScreen` usa ahora `rememberUpdatedState` para que esa lambda observe los porcentajes siguientes; se conservan el indicador Wear, el rojo, las dimensiones y los estados indeterminados.
+
+La comprobación automática se ejecutaba una sola vez al componer la app y reutilizaba durante 24 horas el resultado guardado. Ahora la Activity la ejecuta al entrar en `STARTED`, tanto en un inicio nuevo como al volver desde otra app. Se retira la espera diaria. La exclusión de comprobaciones simultáneas sigue activa; una oferta abierta o una instalación en curso se preservan, incluso si llega después una respuesta de GitHub. No hay comprobaciones periódicas en segundo plano. El botón manual conserva sus mensajes de error.
+
+Las regresiones `check_frontend.py --updater-live` y `--updater-foreground` fallaron antes del cambio: aro al 0 % con texto al 26 %, y ninguna consulta al abrir tras una comprobación reciente. La primera transmite el APK debug real mediante un servidor local lento, compara los píxeles rojos del aro con varios porcentajes y cancela la sesión. Pausa la transmisión entre muestras para que UIAutomator pueda esperar un fotograma estable. Solo el APK debug permite HTTP a `127.0.0.1`; el manifiesto y la configuración de esa prueba quedan fuera de la release. La segunda comprueba el resultado de nuevas consultas en inicios consecutivos y al recuperar la tarea existente.
+
+La implementación conserva [el indicador circular de Wear](https://developer.android.com/reference/kotlin/androidx/wear/compose/material3/package-summary) y usa [el ciclo de vida de Android](https://developer.android.com/topic/libraries/architecture/coroutines#restart) que ya se empleaba para abrir el instalador.
+
+La revisión de limpieza queda acotada a estos fallos: se elimina la espera obsoleta, se repara la lectura de estado y se reutilizan Activity, Store y las pruebas existentes. El porcentaje desconocido y la confirmación de Android siguen siendo estados explícitos de compatibilidad. Los fallos de la comprobación automática no interrumpen el uso del coche; el botón manual informa del error. No se cambian Toyota, credenciales, permisos de publicación ni datos del usuario. La prueba física en OnePlus Watch 4 sigue pendiente.
+
+Validación 0.3.7: 47 pruebas JVM; compilaciones debug/release y lint de reloj debug/release y móvil sin errores; ambas regresiones nuevas y las seis comprobaciones del instalador nativo superadas. Se verificaron firma compatible con 0.3.6 y ausencia de la configuración de red debug en el manifiesto de publicación. Python y diff correctos. Sin dependencias Android nuevas ni cambios de autenticación.
+
 El fallo comunicado en un OnePlus Watch 4 era volver a Información después de aceptar la descarga. El código dibujaba `WaitFace` en el contenido de la app mientras Información seguía en un `Dialog` por encima. No mostraba bytes, porcentaje ni estimación; al terminar de descargar quitaba `updating` antes de que Android resolviera la instalación. Los errores solo llegaban a pantallas concretas, por lo que podían quedar ocultos. El permiso de instalación ya estaba resuelto en el reloj del usuario.
 
 ## Cambio

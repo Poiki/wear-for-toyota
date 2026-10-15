@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
                     lifecycleScope.launch {
                         delay(1_500)
                         val source = java.io.File(applicationInfo.sourceDir)
-                        val apk = Releases.Apk("0.3.5", source.toURI().toString(), source.length())
+                        val apk = Releases.Apk("0.3.5", intent.getStringExtra("updateUrl") ?: source.toURI().toString(), source.length())
                         when (stage) {
                             "offer", "broken-offer" -> Store.update.value = if (stage == "broken-offer") Releases.Apk(apk.version, apk.url + ".missing", apk.size) else apk
                             "unknown" -> Store.installation.value = Store.Installation(apk, progress = Releases.DownloadProgress(50_000, null, 12_000))
@@ -111,6 +111,10 @@ class MainActivity : ComponentActivity() {
         }
         val preview = if (debug && intent.getBooleanExtra("demo", false)) intent.getStringExtra("preview") else null
         setContent { ToyotaTheme { App(onMap = ::openMap, unlockGate = ::unlockGate, preview = preview) } }
+        lifecycleScope.launch {
+            Store.cleanUpdateInstallers()
+            repeatOnLifecycle(Lifecycle.State.STARTED) { Store.checkUpdate() }
+        }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 Store.installation.collect {
@@ -195,7 +199,6 @@ private fun App(onMap: (Double, Double) -> Unit, unlockGate: () -> String?, prev
         }
     }
 
-    LaunchedEffect(Unit) { Store.cleanUpdateInstallers(); Store.checkUpdate() }
     LaunchedEffect(update) { update?.let { offer = it } }
     LaunchedEffect(linked, session) {
         if (session > 0 && preview == null) {

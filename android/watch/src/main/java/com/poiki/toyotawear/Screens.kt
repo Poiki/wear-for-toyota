@@ -48,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -413,11 +414,12 @@ fun WaitFace(car: Bitmap?, text: String, working: Boolean, actions: @Composable 
 fun UpdateScreen(state: Store.Installation, onCancel: () -> Unit) {
     val downloading = state.phase == Store.UpdatePhase.Downloading
     val percent = state.progress?.percent
+    val currentPercent by rememberUpdatedState(percent)
     val remaining = state.progress?.remainingSeconds
     Dial {
         Box(Modifier.fillMaxSize().cockpit(), contentAlignment = Alignment.Center) {
             if (downloading && percent != null) CircularProgressIndicator(
-                progress = { percent / 100f }, modifier = Modifier.fillMaxSize().padding(3.dp), strokeWidth = 6.dp,
+                progress = { (currentPercent ?: 0) / 100f }, modifier = Modifier.fillMaxSize().padding(3.dp), strokeWidth = 6.dp,
             ) else CircularProgressIndicator(modifier = Modifier.fillMaxSize().padding(3.dp), strokeWidth = 6.dp)
             Column(Modifier.width(170.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 BrandHeader()
