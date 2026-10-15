@@ -145,9 +145,9 @@ fun GarageScreen(
                     Text(stringResource(R.string.garage_title), fontSize = 14.sp, lineHeight = 18.sp, textAlign = TextAlign.Center)
                     if (vehicles.size > 1) Text("${number(page + 1)}/${number(vehicles.size)}", fontSize = 8.sp, lineHeight = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Card(onClick = { onSelect(vin) }, contentPadding = PaddingValues(10.dp),
+                Card(onClick = { onSelect(vin) }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                     colors = androidx.wear.compose.material3.CardDefaults.cardColors(containerColor = Color.Transparent),
-                    modifier = Modifier.size(174.dp, 126.dp).align(Alignment.TopCenter).offset(y = 48.dp)
+                    modifier = Modifier.size(174.dp, 118.dp).align(Alignment.TopCenter).offset(y = 48.dp)
                         .clip(RoundedCornerShape(24.dp)).cockpit().border(.5.dp, Color(0xFF393C43), RoundedCornerShape(24.dp))) {
                     BasicText(Snapshot.displayName(vehicle), modifier = Modifier.fillMaxWidth(),
                         style = TextStyle(fontSize = 13.sp, lineHeight = 15.sp, color = Color.White, textAlign = TextAlign.Center),

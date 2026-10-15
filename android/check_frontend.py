@@ -79,6 +79,9 @@ def texts(tree):
 
 
 def check_update_install():
+    version = re.search(r'\bversionName=(\S+)', adb('shell', 'dumpsys', 'package', PKG).decode())
+    assert version, 'Installed app version unavailable'
+    installed_version = version.group(1)
     def no_active_installer():
         package_dump = adb('shell', 'dumpsys', 'package').decode()
         assert 'Active install sessions:' in package_dump
@@ -105,7 +108,7 @@ def check_update_install():
     tap(button(dump(), 'UPDATE'))
     time.sleep(5)
     launch('about', 'es')
-    assert any(text and '0.3.5' in text for text in texts(dump()))
+    assert any(text and installed_version in text for text in texts(dump()))
     no_active_installer()
     print('OK real self-install completes and installed app opens without a staged APK', flush=True)
 
@@ -121,7 +124,7 @@ def check_update_install():
         tap(button(tree, 'UPDATE'))
         time.sleep(5)
         launch('about', 'es')
-        assert any(text and '0.3.5' in text for text in texts(dump()))
+        assert any(text and installed_version in text for text in texts(dump()))
     else:
         assert 'Error al actualizar' in texts(tree)
         assert any(text and 'interrump' in text for text in texts(tree))

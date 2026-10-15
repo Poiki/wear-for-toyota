@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.6 — 2026-10-15
+
+- Add 8 dp of space between the vehicle card and About button in the garage. Preserve photo/text sizes and keep the controls within the round screen.
+- Verify the garage in six languages at 192 and 227 dp. Phone APK version aligned; no phone behavior changes.
+
 ## 0.3.5 — 2026-10-15
 
 - Show update download progress above About/sign-in, with the actual byte percentage, estimated remaining time and separate Android installation stages. Unknown sizes stay indeterminate.
